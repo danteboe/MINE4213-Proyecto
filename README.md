@@ -35,7 +35,7 @@ MINE4213-Proyecto/
 
 1. Importar "entrega1_oceanwatch.ipynb" en el workspace de Databricks (Workspace → Import).
 2. Ajustar, si hace falta, los parámetros de la primera celda de código:
-   - "CATALOG = "oceanwatch"", "SCHEMA = "entrega1"", "VOLUME = "landing"".
+   - "CATALOG = oceanwatch", "SCHEMA = entrega1", "VOLUME = landing".
 3. Ejecutar las celdas en orden. El notebook:
    - crea catálogo / esquema / volume en Unity Catalog,
    - descarga y descomprime los 7 días desde NOAA (idempotente),
