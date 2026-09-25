@@ -41,8 +41,7 @@ MINE4213-Proyecto/
    - descarga y descomprime los 7 días desde NOAA (idempotente),
    - lee con esquema explícito y ejecuta perfilamiento, calidad, preguntas de negocio,
      almacenamiento óptimo y gobernanza.
-4. (Opcional, para la pregunta 4.d) Subir el World Port Index a
-   "/Volumes/oceanwatch/entrega1/landing/wpi/WPI.csv" para el cruce de celdas con puertos.
+
 
 ### Decisiones técnicas
 
@@ -53,6 +52,8 @@ MINE4213-Proyecto/
 - Almacenamiento: propósito de consulta = consulta diaria del operador por fecha y zona marítima;
   se compara Parquet plano vs. Delta particionado por "date" + "ZORDER (LAT, LON)", con evidencia de
   bytes y archivos leídos por la consulta objetivo (partition pruning + data skipping).
+  - **Cruce con World Port Index (WPI):** El notebook descarga automáticamente el CSV desde Kaggle, lo copia al Volume de Databricks y detecta las columnas 'Latitude', 'Longitude' y 'Main Port Name'. Luego redondea las coordenadas de puertos y del tráfico AIS a dos decimales, realiza un 'left join' sobre esa grilla espacial y muestra las 10 celdas con mayor tráfico junto con el puerto correspondiente.
+
 
 ### Resultados clave
 
