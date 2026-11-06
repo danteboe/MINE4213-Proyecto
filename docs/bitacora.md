@@ -17,6 +17,25 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 
 ## Entradas
 
+### 2026-11-05 — Fase 3: Verificación de integración entre FEATs (paso FIXER) — Equipo OceanWatch
+- **Objetivo de la sesión:** re-ejecutar, sin confiar en los `.md` previos, la verificación de
+  integración extremo a extremo del Req. 2 (costuras FEAT-001 → FEAT-003 → FEAT-004 → FEAT-005)
+  con conteos **reales** leídos en vivo del serverless.
+- **Qué se hizo:** `python -m pytest -q` = **76 passed, 4 skipped**; imports perezosos de
+  `quality`/`gold` verificados sin Spark. Consultas vivas (SQL warehouse `377600528fed7c47`):
+  invariante `25.897.493 = 25.857.101 (plata) + 39.734 (cuarentena) + 658 (duplicados)`,
+  diferencia 0; causas cuarentena `mmsi_mid_valido`=39.734 / `mmsi_bien_formado`=21.958; suma
+  `evaluados` métricas = 25.896.835 = plata + cuarentena; 0 incoherencias bandera→null. **Oro
+  limpio**: 0 MMSI huérfanos, 0 MMSI de oro en cuarentena, 0 MMSI mal formados, 0 celdas fuera de
+  rango, grilla a 2 decimales (0 violaciones, ADR-001), 0 puertos huérfanos. Tablas quality
+  previas (`ingesta_metricas`, `pruebas_fallos`) intactas.
+- **Decisiones/ADRs tocados:** ninguno nuevo; se ratifican ADR-009/010/011/012 con datos vivos.
+  No hizo falta tocar código: las costuras entre FEATs ya cuadraban sobre los 25.9M reales.
+- **Estado Verificado vs Diseñado:** **Verificado (ejecutado)**. Único límite conocido: `en_agua`
+  en `null` (informativo, no afecta invariante ni limpieza de oro; procedimiento documentado).
+- **Evidencia:** `evidence/req02-capas-calidad/verificacion_integracion_feats.md`.
+- **Pendientes / siguiente paso:** cierre del bucle de convergencia (veredicto); Fase 4 (Req. 3).
+
 ### 2026-11-05 — Fase 3: Capas de calidad (plata + cuarentena + métricas + oro) y prueba de compuerta — Equipo OceanWatch
 - **Objetivo de la sesión:** cerrar el Req. 2 con **evidencia real**: materializar la capa
   **plata** con compuertas de calidad y cuarentena, las **métricas** de calidad, la capa **oro**
