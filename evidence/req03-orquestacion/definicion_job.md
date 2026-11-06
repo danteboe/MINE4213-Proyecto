@@ -53,8 +53,11 @@ Workspace:
 Validation OK!
 ```
 
-## Pendiente de ejecución (FEAT-002)
+## Ejecutado en FEAT-002 (ya NO pendiente)
 
-- `databricks bundle deploy` (crear/actualizar el Job real; guardar el `job_id`).
-- `databricks jobs run-now --job-id <id> --json '{"job_parameters":{"fecha_proceso":"2023-06-03"}}'`
-  y polling de `jobs get-run` hasta `TERMINATED`/`SUCCESS`.
+- `databricks bundle deploy` -> Job CREADO real, **`job_id = 202547459111516`**
+  (`Created jobs.oceanwatch_pipeline_entrega2`; `Resources: 1 created`). Verificación
+  literal de `databricks jobs get 202547459111516` en `jobs_get.md`.
+- `databricks jobs run-now` con `fecha_proceso` + polling de `jobs get-run` hasta
+  `TERMINATED`/`SUCCESS`: ver `corridas_run_now.md` (corrida base), `backfill_idempotente.md`
+  (idempotencia y backfill) y `reintento.md` (reintento real).
