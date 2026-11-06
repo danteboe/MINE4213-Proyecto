@@ -157,6 +157,56 @@ silver:
     imo: "imo_invalido"                # IMO con patrón inválido -> IMO=null + bandera (vacío es VÁLIDO)
     en_agua: "en_agua"                 # bandera tierra/agua (ADR-010, nulificar_atributo, NO descarta)
 
+# Machine Learning (Req. 6, Fase 6). Detección de anomalías de velocidad SOG
+# RELATIVA al tipo de buque (ADR-005). SIN secretos. Cada valor se justifica abajo.
+ml:
+  # Esquema de UC donde vive el MODELO registrado (oceanwatch.ml.<modelo>). La TABLA
+  # de salida, en cambio, se expone en 'gold' para que el dashboard (Req.4) la consuma.
+  esquema: "ml"
+  # Tabla de anomalías en esquema GOLD (D8): 1 fila por posición anómala, apta para el
+  # visual 'anomalías del día'. Se expone en gold (no ml) para consumo directo del dashboard.
+  tabla_anomalias:
+    esquema: "gold"                    # oceanwatch.gold.anomalias_velocidad
+    objeto: "anomalias_velocidad"
+  # Modelo en Unity Catalog, nombre three-part catalogo.esquema.objeto (MLflow 3 / UC).
+  modelo_uc: "oceanwatch.ml.detector_anomalias_velocidad"
+  # Alias del campeón (UC usa ALIAS, no stages deprecados). La inferencia carga @champion.
+  alias_campeon: "champion"
+  # Experimento MLflow bajo el workspace del usuario (ruta de workspace, no secreto).
+  experimento: "/Users/jd.torresa1@uniandes.edu.co/oceanwatch_anomalias_sog"
+  # Semilla única para muestreo y modelo (D7, reproducibilidad).
+  semilla: 42
+  # Partición TEMPORAL (D3, antifuga): se entrena con 2023-06-01/02 y se infiere sobre
+  # 2023-06-03 (no aleatoria: evita filtrar futuro->pasado del mismo buque; es el
+  # escenario real de inferencia batch del día siguiente).
+  train_batch_dates: ["2023-06-01", "2023-06-02"]
+  test_batch_date: "2023-06-03"
+  # Muestra reproducible traída al driver con toPandas() para entrenar en serverless
+  # (D4): ~200k filas evitan el INTERNAL_ERROR de Spark Connect al escribir volúmenes
+  # grandes y bastan para un modelo simple; la muestra usa la semilla 42.
+  muestra_entrenamiento_filas: 200000
+  # Umbral de la línea base |z_sog|>3 (D2): ~3 desviaciones estándar del tipo.
+  umbral_zscore_base: 3.0
+  # IsolationForest de scikit-learn (D2). contamination 0.01 = se espera ~1% de
+  # anomalías; random_state 42 reproducible; 100 árboles = default robusto y barato.
+  isolation_forest:
+    n_estimators: 100
+    contamination: 0.01
+    random_state: 42
+  # Orden FIJO del vector de características = CONTRATO del modelo (D1). NO reordenar:
+  # debe coincidir exactamente entre entrenamiento e inferencia.
+  features_orden: ["z_sog", "delta_sog", "hora_sin", "hora_cos"]
+  # Versiones de las librerías ML que se instalan con %pip PINNEADO dentro del notebook
+  # serverless (reproducibilidad, D7). NO son dependencias locales de pyproject: solo
+  # existen en el runtime de Databricks. Las versiones EXACTAS se fijan tras la 1a
+  # corrida real del notebook de entrenamiento (FEAT-002), que resuelve lo disponible
+  # en el runtime; hasta entonces estos valores son PENDIENTE DE EJECUCIÓN (placeholder).
+  pip_pins:
+    mlflow: "PENDIENTE_FEAT002"        # versión exacta tras la 1a corrida real
+    scikit-learn: "PENDIENTE_FEAT002"
+    numpy: "PENDIENTE_FEAT002"
+    pandas: "PENDIENTE_FEAT002"
+
 quarantine:
   tabla_rejected: "ais_rejected"       # oceanwatch.quarantine.ais_rejected (registro original + causas + fechas)
   # Patrón Dead-letter/Quarantine (ADR-011): registro original COMPLETO + causas
