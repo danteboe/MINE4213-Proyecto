@@ -79,3 +79,88 @@ esquema_ais:   # 17 campos, esquema explícito (continuidad Entrega 1)
 gold:
   grilla_espacial: "redondeo_latlon"   # decisión Fase 1: NO H3 (ver ADR-001)
   decimales_grilla: 2
+
+# Catálogo de reglas de calidad de la capa plata (Req. 2, ADR-009).
+# Cada regla lleva: umbral(es) parametrizados, un nombre estable, su versión ('v1')
+# y la acción cuando se viola ('descartar_fila' => a cuarentena; 'nulificar_atributo'
+# => la fila pasa, el atributo va a null + bandera). Los umbrales NO son "a ojo":
+# están justificados por el diagnóstico real de 25.897.493 filas
+# (evidence/req02-capas-calidad/diagnostico_calidad_bronce.md). SIN secretos.
+calidad:
+  # Rango geográfico físico de coordenadas y valores centinela "no disponible".
+  coordenadas:
+    lat_min: -90.0
+    lat_max: 90.0
+    lon_min: -180.0
+    lon_max: 180.0
+    lat_centinela: 91.0        # LAT=91 => "no disponible" (0 casos en el corpus, regla por robustez)
+    lon_centinela: 181.0       # LON=181 => "no disponible"
+  # Velocidad sobre el fondo (knots). Centinela AIS 102.3 = "no disponible".
+  sog:
+    centinela: 102.3           # SOG>=102.3 => "no disponible"; 65.510 casos en el corpus
+    # Máximo físico plausible: 80 kn. Muy por encima de P99.9=32.5 kn (deja pasar
+    # buques rápidos reales entre 32.5 y 80) y muy por debajo del centinela 102.3,
+    # que es el corte inequívoco. Entre 80 y 102.3 no hay señales reales esperadas.
+    max_fisico: 80.0
+  # Rumbo de proa (Heading). Centinela AIS 511 = "no disponible".
+  heading:
+    centinela: 511.0           # 14.367.009 casos (~55.5%) en el corpus
+    min: 0.0
+    max: 359.0
+  # Rumbo sobre el fondo (COG). Centinela AIS 360 = "no disponible".
+  cog:
+    centinela: 360.0           # 4.376.798 casos (~16.9%) en el corpus
+    min: 0.0
+    max: 359.0
+  # Identificadores de buque.
+  mmsi:
+    digitos: 9                 # MMSI válido = exactamente 9 dígitos; 21.960 no cumplen (~0.085%)
+    mid_min: 201               # MID (3 primeros dígitos) en el rango ITU de países marítimos
+    mid_max: 775               # [201,775] según la asignación ITU de Maritime Identification Digits
+  imo:
+    digitos: 7                 # IMO = 7 dígitos con dígito verificador; vacío/None es VÁLIDO
+  # Dimensiones estáticas del buque (metros). Valor <= 0 es no físico.
+  dimensiones:
+    min_exclusivo: 0.0         # Length/Width/Draft deben ser > 0
+  # Nombre estable, versión y acción por regla (consumido por FEAT-003).
+  reglas:
+    coordenadas_en_rango:
+      nombre: "coordenadas_en_rango"
+      version: "v1"
+      accion: "descartar_fila"
+    coordenada_no_centinela:
+      nombre: "coordenada_no_centinela"
+      version: "v1"
+      accion: "descartar_fila"
+    mmsi_bien_formado:
+      nombre: "mmsi_bien_formado"
+      version: "v1"
+      accion: "descartar_fila"
+    mmsi_mid_valido:
+      nombre: "mmsi_mid_valido"
+      version: "v1"
+      accion: "descartar_fila"
+    timestamp_valido_no_futuro:
+      nombre: "timestamp_valido_no_futuro"
+      version: "v1"
+      accion: "descartar_fila"
+    sog_plausible:
+      nombre: "sog_plausible"
+      version: "v1"
+      accion: "nulificar_atributo"
+    heading_valido:
+      nombre: "heading_valido"
+      version: "v1"
+      accion: "nulificar_atributo"
+    cog_valido:
+      nombre: "cog_valido"
+      version: "v1"
+      accion: "nulificar_atributo"
+    dimension_fisica:
+      nombre: "dimension_fisica"
+      version: "v1"
+      accion: "nulificar_atributo"
+    imo_valido:
+      nombre: "imo_valido"
+      version: "v1"
+      accion: "nulificar_atributo"
