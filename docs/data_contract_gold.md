@@ -18,6 +18,7 @@ Estado: **Verificado (ejecutado)** en Databricks serverless el 2026-11-06
 | `gold.trayectorias_diarias` | 1 fila por buque y día | `(MMSI, dia)` | 61.768 | `silver.ais_clean` |
 | `gold.presencia_puertos` | 1 fila por buque, puerto y día | `(MMSI, INDEX_NO, dia)` | 9.153 | `silver.ais_clean` ⋈ `gold.world_port_index` |
 | `gold.matriz_trafico` | 1 fila por celda y hora | `(celda_lat, celda_lon, hora)` | 2.319.365 | `silver.ais_clean` |
+| `gold.anomalias_velocidad` | 1 fila por posición AIS anómala | `(MMSI, BaseDateTime)` | 67.828 (`_batch_date=2023-06-03`) | `silver.ais_clean` + modelo UC `oceanwatch.ml.detector_anomalias_velocidad` `@champion` |
 
 ## `gold.world_port_index` (dimensión de referencia)
 
@@ -97,6 +98,43 @@ Densidad de tráfico por celda espacial (redondeo lat/lon a 2 decimales, ADR-001
 
 - **Granularidad:** 1 fila por `(celda_lat, celda_lon, hora)`. **Clave:** las tres.
 - **Garantías:** LAT/LON en rango (heredado de plata); celda ~1.1 km de lado en latitud.
+
+## `gold.anomalias_velocidad` (hecho — salida del modelo de ML)
+
+Posiciones AIS marcadas como anómalas en velocidad (SOG) por el modelo de detección de
+anomalías de la Fase 6 (Req. 6, ADR-005/ADR-016). Se expone en la capa **oro** (no en `ml`)
+para que el dashboard (Req. 4) la consuma directamente en el visual "anomalías del día". La
+pueblan **solo** las filas anómalas: la tabla de inferencia de la tarea `ml_anomalias` del Job
+escribe **1 fila por posición anómala** (`es_anomalia = true`). Tabla Delta, `USING DELTA`.
+
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `MMSI` | BIGINT | Identificador del buque (**clave lógica**). |
+| `BaseDateTime` | TIMESTAMP | Instante de la posición AIS anómala, UTC (**clave lógica**). |
+| `LAT` | DOUBLE | Latitud de la posición (grados decimales). |
+| `LON` | DOUBLE | Longitud de la posición (grados decimales). |
+| `SOG` | DOUBLE | Velocidad sobre el fondo (*Speed Over Ground*, nudos). |
+| `VesselType` | INT | Tipo de buque (código AIS); define la normalidad de SOG. |
+| `z_sog` | DOUBLE | Z-score de SOG relativo al tipo: `(SOG - media_tipo) / max(std_tipo, 1e-6)`. |
+| `score_anomalia` | DOUBLE | Score continuo del IsolationForest (`score_samples`; más negativo = más anómalo). |
+| `es_anomalia` | BOOLEAN | Marca de anomalía (siempre `true` en esta tabla: solo se escriben anómalas). |
+| `razon` | STRING | Explicación legible, p. ej. `z_sog=36.7 (>3 por tipo) tipo 36 \| score=-0.7447`. |
+| `_batch_date` | DATE | Fecha de proceso (partición lógica de inferencia = `fecha_proceso` del Job). |
+
+- **Granularidad:** 1 fila por posición AIS anómala. **Clave lógica:** `(MMSI, BaseDateTime)`.
+- **Linaje:** `oceanwatch.silver.ais_clean` (features cinemáticas: `z_sog` por tipo, `delta_sog`
+  por buque, hora cíclica) puntuadas por el modelo registrado en Unity Catalog
+  `oceanwatch.ml.detector_anomalias_velocidad` `@champion` (IsolationForest, ADR-016). Se
+  excluyen las posiciones con SOG centinela (`sog_no_disponible = true`) y SOG nulo.
+- **Conteo real:** **67.828** filas para `_batch_date = 2023-06-03` (= total de la tabla; la
+  escritura `DELETE`+`INSERT` idempotente deja una sola partición de fecha). Proporción ≈ 0.85 %
+  de las 8.001.918 posiciones puntuadas del día, coherente con `contamination = 0.01` del modelo.
+- **Escritura (serverless):** la carga por fecha la hace el notebook de inferencia
+  (`notebooks/fase6_tarea_ml_anomalias.py`) con `spark.sql` (`DELETE`+`INSERT` idempotente de la
+  partición `_batch_date`), **NUNCA** `df.write.saveAsTable` (fricción serverless, igual que el
+  resto del oro). DDL en `resources/sql/fase6_anomalias.sql`.
+- **Evidencia:** `evidence/req06-ml-mlflow/tabla_anomalias.md` (DDL, conteo y muestra de filas),
+  `evidence/req06-ml-mlflow/integracion_job_ml.md` (corrida del Job SUCCESS).
 
 ## Versionado
 

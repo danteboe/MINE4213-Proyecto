@@ -17,6 +17,74 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 
 ## Entradas
 
+### 2026-11-05 — Fase 6: ML con MLflow (Req. 6) — Equipo OceanWatch
+- **Objetivo de la sesión:** cerrar el Req. 6 con **evidencia real**: implementar el caso de ML
+  ya fijado por ADR-005 (detección de anomalías de velocidad SOG), demostrando la **integración
+  MLOps** completa — features desde el Lakehouse, experimento MLflow, modelo en Unity Catalog con
+  alias `@champion` e inferencia batch como tarea del Job que puebla una tabla de oro — todo
+  **ejecutado** en Databricks serverless, no solo diseñado. El objetivo es la integración, no
+  maximizar precisión (modelo deliberadamente simple).
+- **Qué se hizo:**
+  - **Features puras + tests (FEAT-001):** `src/oceanwatch/ml/features.py` con funciones puras de
+    ingeniería de características (`z_sog_por_tipo`, `delta_sog`, `hora_a_ciclico`,
+    `construir_vector_features`, `clasificar_por_umbral_z`, `estadisticas_por_tipo`), imports
+    PySpark/numpy perezosos, vector de orden fijo `[z_sog, delta_sog, hora_sin, hora_cos]`; bloque
+    `ml` en `conf/config.yaml` (sin secretos); 12 tests nuevos en `tests/test_ml_features.py`.
+    `python -m pytest -q` = **109 passed, 1 skipped**.
+  - **Experimento MLflow + registro en UC (FEAT-002):** notebook
+    `notebooks/fase6_entrenamiento_mlflow.py` ejecutado como one-time run serverless
+    (`347173419720341`, task `386348858221273`, Python 3.11.10). Experimento
+    `/Users/jd.torresa1@uniandes.edu.co/oceanwatch_anomalias_sog` (`experiment_id 2474832545018011`)
+    con **2 runs reales**: `baseline_zscore` `a0cca5b5a4bd4373a7c0cd8ed04dc753`
+    (`pct_flagged_test=0.01203`) e `isolation_forest` `be8f2ef2c2634efcaffa7fd89d3daf8f`
+    (campeón; `pct_flagged_test=0.00888`, `acuerdo_con_baseline=0.9886`, `separacion_scores=0.2070`,
+    `signature` + `input_example`). Registro en Models in Unity Catalog
+    `oceanwatch.ml.detector_anomalias_velocidad` **versión 1** (`READY`), alias **`@champion`** → v1
+    (verificado por la MLflow REST API de UC). Antifuga por partición temporal (train 2023-06-01/02,
+    test 2023-06-03; stats solo del train).
+  - **Integración en el Job + tabla de oro (FEAT-003):** `resources/sql/fase6_anomalias.sql` (DDL
+    `gold.anomalias_velocidad`) y notebook `notebooks/fase6_tarea_ml_anomalias.py` (carga
+    `@champion`, puntúa la fecha, escribe las anómalas con `spark.sql` `DELETE`+`INSERT`,
+    auditoría). Nueva tarea `ml_anomalias` (`depends_on` oro, `max_retries 1`) en el Job
+    `oceanwatch_pipeline_entrega2` (`job_id 202547459111516`) — las 4 tareas previas intactas.
+    `bundle validate`/`deploy` OK (Job ahora con **5 tareas**). Corrida real `run-now`
+    `fecha_proceso=2023-06-03`: `run_id` **483234774995672** → **SUCCESS** con las 5 tareas SUCCESS.
+    `gold.anomalias_velocidad` poblada con **67.828** filas anómalas para 2023-06-03 (~0.85 %).
+  - **Documentación + trazabilidad (FEAT-004):** ADR-016 (9 secciones, Aceptado), contrato de oro
+    con `gold.anomalias_velocidad`, `evidence/req06-ml-mlflow/reproducibilidad.md`, esta entrada y
+    la fila Req.6 de la matriz a **Verificado (ejecutado)**. El DAG ya muestra `ml` como nodo REAL.
+- **Decisiones/ADRs tocados:** **ADR-016** (modelo de anomalías SOG + MLflow + registro en UC +
+  integración en el Job), que implementa y cita **ADR-005** (caso de ML ya elegido). Se apoyan
+  ADR-013/014 (diseño del Job, idempotencia/reintentos: base de `ml_anomalias`) y ADR-004 (UTC
+  serverless para `hora`).
+- **Estado Verificado vs Diseñado:** **Verificado (ejecutado)** = experimento con 2 runs reales,
+  modelo `@champion` v1 en UC, tarea `ml_anomalias` corriendo DENTRO del Job (5/5 SUCCESS) y tabla
+  `gold.anomalias_velocidad` con 67.828 filas reales para 2023-06-03. Nada quedó PENDIENTE DE
+  EJECUCIÓN en el Req. 6.
+- **Síntoma→causa→solución (callejones reales de la ejecución):**
+  - *scikit-learn 1.3.0 no instala en el Job:* síntoma = `PipError` al pinnear `scikit-learn==1.3.0`
+    en la tarea del Job; causa = el `notebook_task` serverless corre en el entorno por defecto v3
+    (Python **3.12**) y 1.3.x no tiene wheel para 3.12; el entorno no es fijable por DAB; solución =
+    inferencia con `scikit-learn==1.5.2` (wheel 3.11/3.12) + `mlflow==3.18.0` (necesario para
+    descargar el modelo de UC; `mlflow 2.11.4` preinstalado falla con S3 HeadObject 400). Verificado
+    que el modelo serializado con 1.3.0 predice **idéntico** bajo 1.5.2 (solo
+    `InconsistentVersionWarning`, silenciado).
+  - *CREATE TABLE con PARSE_SYNTAX_ERROR:* síntoma = el DDL fallaba; causa = dos `COMMENT` del
+    `.sql` contenían `;` que el splitter por sentencias del notebook partía a la mitad; solución =
+    quitar los `;` del texto de los `COMMENT`.
+  - *Escritura Delta masiva en serverless:* (heredado) `df.write.saveAsTable` da `INTERNAL_ERROR`;
+    solución = escribir con `spark.sql` (`DELETE`+`INSERT` idempotente), y entrenar sobre una
+    muestra reproducible (~200k, semilla 42) traída al driver con `toPandas()`.
+- **Evidencia:** `evidence/req06-ml-mlflow/` — `distribucion_sog_insumo_modelo.md`,
+  `experimento_mlflow.md`, `registro_modelo_uc.md`, `integracion_job_ml.md`, `tabla_anomalias.md`,
+  `reproducibilidad.md`. Código: `src/oceanwatch/ml/features.py`, `tests/test_ml_features.py`,
+  `notebooks/fase6_entrenamiento_mlflow.py`, `notebooks/fase6_tarea_ml_anomalias.py`,
+  `resources/sql/fase6_anomalias.sql`, `resources/jobs/oceanwatch_pipeline.job.yml` (tarea
+  `ml_anomalias`), `conf/config.yaml` (bloque `ml`). Docs: ADR-016,
+  `docs/data_contract_gold.md`, `docs/architecture/fase4-dag-orquestacion.md`.
+- **Pendientes / siguiente paso:** ninguno del Req. 6. El `refresh_dashboard` (Fase 7) sigue como
+  nodo futuro del DAG; el dashboard (Req. 4) consumirá `gold.anomalias_velocidad`.
+
 ### 2026-11-05 — Fase 4: Orquestación por Job de Databricks (Req. 3) — Equipo OceanWatch
 - **Objetivo de la sesión:** cerrar el Req. 3 con **evidencia real**: definir el pipeline
   medallion como un Job de Databricks versionado (DAB), ejecutarlo de verdad (base,
