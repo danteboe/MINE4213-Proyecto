@@ -103,9 +103,30 @@ resources:
           max_retries: 1
           min_retry_interval_millis: 60000
 
+        # ------------------------------------------------------------ ml_anomalias
+        # Fase 6 (Req. 6, ML con MLflow). Inferencia batch del detector de anomalías
+        # de velocidad SOG: carga el modelo campeón @champion desde Unity Catalog y
+        # puebla oceanwatch.gold.anomalias_velocidad para fecha_proceso. Cuelga de
+        # `oro` (el oro ya está materializado; la silver.ais_clean que lee ya existe).
+        - task_key: ml_anomalias
+          depends_on:
+            - task_key: oro
+          notebook_task:
+            notebook_path: ${var.workspace_oceanwatch}/notebooks/fase6_tarea_ml_anomalias
+            base_parameters:
+              fecha_proceso: "{{job.parameters.fecha_proceso}}"
+              job_run_id: "{{job.run_id}}"
+              job_id: "{{job.id}}"
+              task_key: "{{task.name}}"
+          # Inferencia DETERMINISTA (modelo fijo + escritura DELETE+INSERT idempotente):
+          # un fallo típico es transitorio (arranque serverless, carga del modelo UC)
+          # -> 1 reintento basta; no hay riesgo de duplicar por la idempotencia.
+          max_retries: 1
+          min_retry_interval_millis: 60000
+
         # ------------------------------------------------------------------------
-        # NODOS FUTUROS (documentados, NO implementados en esta entrega):
-        #   - ml:                depends_on: [oro]   (Fase 6, Req. pronóstico/anomalías)
+        # NODO FUTURO (documentado, NO implementado en esta entrega):
         #   - refresh_dashboard: depends_on: [oro]   (Fase 7, dashboard de Databricks)
-        # Colgarán de `oro` como nuevas tasks notebook_task/dashboard_task serverless.
+        # Colgará de `oro` como nueva task dashboard_task serverless. El nodo `ml`
+        # (ml_anomalias) ya está IMPLEMENTADO arriba (Fase 6).
         # ------------------------------------------------------------------------

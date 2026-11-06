@@ -206,6 +206,15 @@ ml:
     scikit-learn: "1.3.0"     # resuelto por %pip en serverless (FEAT-002)
     numpy: "1.26.4"           # preinstalado en el runtime serverless (FEAT-002)
     pandas: "1.5.3"           # preinstalado en el runtime serverless (FEAT-002)
+  # Pins de INFERENCIA (FEAT-003, tarea ml_anomalias del Job). Las tareas del Job corren
+  # sobre el entorno serverless por defecto version 3 (Python 3.12), donde scikit-learn
+  # 1.3.x NO tiene wheel (solo 3.8–3.11). Como el entorno de un notebook_task serverless
+  # NO es fijable por DAB, la inferencia usa scikit-learn 1.5.2 (con wheel para 3.11 y
+  # 3.12), que carga el modelo @champion (pickled con 1.3.0) y predice IDÉNTICO
+  # (verificado 2026-11-05; solo emite InconsistentVersionWarning, silenciado).
+  pip_pins_inferencia:
+    mlflow: "3.18.0"          # necesario para descargar el modelo registrado en UC
+    scikit-learn: "1.5.2"     # wheel para Python 3.12; carga el pickle de 1.3.0 sin cambiar predicciones
 
 quarantine:
   tabla_rejected: "ais_rejected"       # oceanwatch.quarantine.ais_rejected (registro original + causas + fechas)
