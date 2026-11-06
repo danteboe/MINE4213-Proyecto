@@ -13,6 +13,12 @@
 - **Fecha:** 2026-11-05
 - **Estado:** Verificado (ejecutado)
 
+> **Actualización (2026-11-05):** esta medición es el insumo de FEAT-002 (costo y
+> exactitud del método). La bandera `en_agua` **ya quedó MATERIALIZADA** en
+> `oceanwatch.silver.ais_clean` (0 NULL sobre 25.857.101 filas; 71.65 % tierra, coherente
+> con el 72.28 % de esta muestra) mediante clasificación por **celda distinta** (sin
+> `pandas_udf`) + `MERGE`. Ver `enriquecimiento_en_agua.md` y ADR-010 §8.
+
 ## Identificación del run serverless
 
 | Campo | Valor real |

@@ -82,3 +82,32 @@ def test_en_agua_sin_libreria_eleva_error_claro_o_clasifica():
 def test_en_agua_puntos_conocidos_si_hay_libreria(lat, lon, esperado):
     pytest.importorskip("global_land_mask")
     assert en_agua(lat, lon) is esperado
+
+
+# --- Clasificación por celda SIN pandas_udf (ADR-010 §8, enfoque materializado) ----
+
+def test_clasificar_celdas_en_agua_vectorizado_si_hay_libreria():
+    """``clasificar_celdas_en_agua`` (sin Spark, sin pandas_udf) clasifica un lote de
+    celdas distintas: agua donde corresponde y tierra donde corresponde. Es el núcleo
+    del camino que materializó ``en_agua`` sobre la plata (celdas distintas, no filas)."""
+    pytest.importorskip("global_land_mask")
+    pytest.importorskip("numpy")
+    from oceanwatch.quality.materializar import clasificar_celdas_en_agua
+
+    celdas = [
+        (0.0, -30.0),    # Atlántico medio -> agua
+        (36.0, -122.6),  # Pacífico frente a Monterey -> agua
+        (38.5, -98.0),   # centro de Kansas -> tierra
+        (48.9, 2.3),     # París -> tierra
+    ]
+    res = clasificar_celdas_en_agua(celdas)
+    # Preserva orden, lat/lon y añade el booleano en_agua.
+    assert [(r[0], r[1]) for r in res] == celdas
+    assert [r[2] for r in res] == [True, True, False, False]
+
+
+def test_clasificar_celdas_en_agua_lista_vacia():
+    """Entrada vacía -> salida vacía, sin tocar la librería."""
+    from oceanwatch.quality.materializar import clasificar_celdas_en_agua
+
+    assert clasificar_celdas_en_agua([]) == []

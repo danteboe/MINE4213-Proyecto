@@ -103,6 +103,11 @@ gold:
 # para la deduplicación bronce->plata (ADR-006); NO se redefinen aquí.
 silver:
   tabla_clean: "ais_clean"             # oceanwatch.silver.ais_clean (pasa TODAS las compuertas de descarte)
+  # Tabla de referencia celda->en_agua (ADR-010): una fila por celda de grilla distinta
+  # (round(LAT,2),round(LON,2)) con su bandera en_agua. Se puebla clasificando las celdas
+  # DISTINTAS con global-land-mask FUERA de Spark (sin pandas_udf) y enriquece la plata
+  # por MERGE de celda. Se conserva como referencia reutilizable.
+  tabla_celda_en_agua: "celda_en_agua" # oceanwatch.silver.celda_en_agua
   # Columnas de banderas que marcan los atributos nulificados (acción nulificar_atributo).
   banderas:
     sog: "sog_no_disponible"           # SOG>=102.3 (centinela) -> SOG=null + bandera

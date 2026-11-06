@@ -281,8 +281,146 @@ def materializar_stream(spark: Any, cfg: dict[str, Any]):
     return query
 
 
+def tabla_celda_en_agua_fqn(cfg: dict[str, Any]) -> str:
+    """FQN de la tabla de referencia celda->en_agua (``oceanwatch.silver.celda_en_agua``).
+
+    Tabla de referencia (Reference Data Enrichment, ADR-010) con una fila por celda de
+    grilla distinta (``round(LAT,2)``, ``round(LON,2)`` — ADR-001) y su bandera
+    ``en_agua`` (True=agua, False=tierra). Se puebla clasificando las celdas DISTINTAS
+    (no las 25.9M filas) con ``global_land_mask`` FUERA de Spark y se usa para enriquecer
+    la plata por join de celda. El nombre es parametrizable en ``cfg['silver']``.
+    """
+    return fqn(cfg, "silver", cfg["silver"].get("tabla_celda_en_agua", "celda_en_agua"))
+
+
+def clasificar_celdas_en_agua(celdas: list[tuple[float, float]]) -> list[tuple[float, float, bool]]:
+    """Clasifica celdas (lat, lon) como agua/tierra con ``global_land_mask`` (sin Spark).
+
+    Vectorizado sobre arrays numpy (``globe.is_land``); ``en_agua = not is_land``. Puro,
+    testeable sin Spark y SIN ``pandas_udf``. Es el núcleo del enfoque que SÍ funciona en
+    serverless: se clasifican las CELDAS DISTINTAS de la grilla (cientos de miles), no las
+    ~25.9M filas de la plata, evitando la fricción del ``pandas_udf`` de ``global_land_mask``
+    sobre todo el corpus (ver nota en ``_columna_en_agua`` y ADR-010 §8).
+
+    Args:
+        celdas: lista de tuplas ``(celda_lat, celda_lon)`` (ya redondeadas a la grilla).
+
+    Returns:
+        lista de tuplas ``(celda_lat, celda_lon, en_agua)`` con ``en_agua`` booleano.
+
+    Raises:
+        MaskNoDisponibleError: si ``global_land_mask`` no está instalada (import perezoso).
+    """
+    import numpy as np
+
+    from oceanwatch.quality.tierra_agua import MaskNoDisponibleError
+
+    try:
+        from global_land_mask import globe
+    except ImportError as exc:  # pragma: no cover - depende del entorno
+        raise MaskNoDisponibleError(
+            "global_land_mask no está instalada. Ejecuta "
+            "`%pip install global-land-mask==1.0.0` (serverless) o `pip install` (local)."
+        ) from exc
+
+    if not celdas:
+        return []
+    lat = np.array([float(c[0]) for c in celdas], dtype="float64")
+    lon = np.array([float(c[1]) for c in celdas], dtype="float64")
+    es_tierra = np.asarray(globe.is_land(lat, lon), dtype=bool)
+    en_agua = ~es_tierra
+    return [(float(lat[i]), float(lon[i]), bool(en_agua[i])) for i in range(len(celdas))]
+
+
+def enriquecer_en_agua_por_celda(spark: Any, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Materializa ``en_agua`` en la plata por CELDA distinta (enfoque sin ``pandas_udf``).
+
+    Enfoque robusto (ADR-010 §8, verificado en serverless 2026-11-05) que reemplaza al
+    ``pandas_udf`` de ``global_land_mask`` (que falló sobre las 25.9M filas en Spark
+    Connect):
+
+    1. Obtiene las CELDAS DISTINTAS de la plata (``round(LAT,2)``, ``round(LON,2)`` —
+       ADR-001, consistente con ``geo.celda_grilla``). Son cientos de miles, no millones.
+    2. Las trae al driver (``toPandas``/``collect``; el conjunto es pequeño) y las
+       clasifica con ``clasificar_celdas_en_agua`` (vectorizado numpy, SIN ``pandas_udf``).
+    3. Escribe/reescribe la tabla de referencia ``silver.celda_en_agua``.
+    4. Enriquece la plata con ``MERGE`` por join de celda (solo UPDATE de ``en_agua``).
+
+    La bandera ``en_agua`` es NULIFICAR-ATRIBUTO (informativa, ADR-010): NO descarta filas,
+    NO entra en ``causas`` ni en la invariante de conciliación; solo se POBLA. Idempotente.
+
+    Returns:
+        dict con ``ok`` (bool), ``celdas`` (nº de celdas distintas), ``en_agua`` /
+        ``en_tierra`` / ``nulos`` (conteos de FILAS de la plata) si tuvo éxito, o ``error``.
+    """
+    from pyspark.sql import functions as F
+
+    bandera = cfg["silver"]["banderas"]["en_agua"]
+    tabla = tabla_silver_fqn(cfg)
+    ref = tabla_celda_en_agua_fqn(cfg)
+    dec = int(cfg["gold"]["decimales_grilla"])
+    try:
+        # (1) Celdas distintas de la plata (coords no nulas; en plata siempre lo son).
+        celdas_df = (
+            spark.table(tabla)
+            .where(F.col("LAT").isNotNull() & F.col("LON").isNotNull())
+            .select(
+                F.round(F.col("LAT"), dec).alias("celda_lat"),
+                F.round(F.col("LON"), dec).alias("celda_lon"),
+            )
+            .distinct()
+        )
+        celdas = [(r["celda_lat"], r["celda_lon"]) for r in celdas_df.collect()]
+
+        # (2) Clasificación vectorizada SIN pandas_udf.
+        clasificadas = clasificar_celdas_en_agua(celdas)
+
+        # (3) Tabla de referencia celda -> en_agua.
+        esquema = "celda_lat double, celda_lon double, en_agua boolean"
+        ref_df = spark.createDataFrame(clasificadas, schema=esquema)
+        (
+            ref_df.write.format("delta")
+            .mode("overwrite")
+            .option("overwriteSchema", "true")
+            .saveAsTable(ref)
+        )
+
+        # (4) Enriquecer la plata por join de celda (MERGE INTO, solo UPDATE de en_agua).
+        spark.sql(
+            f"""
+            MERGE INTO {tabla} AS c
+            USING {ref} AS r
+            ON round(c.LAT, {dec}) = r.celda_lat AND round(c.LON, {dec}) = r.celda_lon
+            WHEN MATCHED THEN UPDATE SET c.{bandera} = r.en_agua
+            """
+        )
+
+        agg = spark.table(tabla).agg(
+            F.sum(F.col(bandera).cast("int")).alias("en_agua"),
+            F.sum((~F.col(bandera)).cast("int")).alias("en_tierra"),
+            F.sum(F.col(bandera).isNull().cast("int")).alias("nulos"),
+        ).collect()[0]
+        return {
+            "ok": True,
+            "celdas": len(clasificadas),
+            "en_agua": int(agg["en_agua"] or 0),
+            "en_tierra": int(agg["en_tierra"] or 0),
+            "nulos": int(agg["nulos"] or 0),
+        }
+    except Exception as exc:  # noqa: BLE001 - la bandera es informativa; no bloquea el flujo
+        return {"ok": False, "error": repr(exc)}
+
+
 def enriquecer_en_agua(spark: Any, cfg: dict[str, Any]) -> dict[str, Any]:
     """Enriquece la bandera ``en_agua`` de la plata con la máscara tierra/agua (ADR-010).
+
+    .. deprecated::
+        Camino basado en el ``pandas_udf`` de ``global_land_mask`` sobre las 25.9M filas.
+        En el cómputo serverless (Spark Connect) ese ``pandas_udf`` FALLÓ y dejó ``en_agua``
+        en NULL. El camino que SÍ materializa la bandera es
+        ``enriquecer_en_agua_por_celda`` (clasifica las celdas DISTINTAS fuera de Spark y
+        enriquece la plata por ``MERGE`` de celda). Se conserva esta función por
+        trazabilidad del intento original; prefiera ``enriquecer_en_agua_por_celda``.
 
     Paso SEPARADO del núcleo de materialización: recalcula solo la columna booleana
     ``en_agua`` (informativa, NULIFICAR-ATRIBUTO) con el ``pandas_udf`` de

@@ -98,6 +98,21 @@ expectativas de calidad: se marca, no se descarta).
   `databricks.exe jobs get-run --run-id 614704376036187 --output json` y
   `databricks.exe jobs get-run-output 641524386080059 --output json`. Métricas en
   `evidence/req02-capas-calidad/mascara_tierra_agua.md`.
+- **Materialización de la bandera (real, 2026-11-05):** la bandera `en_agua` quedó
+  **MATERIALIZADA** sobre las 25.857.101 filas de `oceanwatch.silver.ais_clean`
+  (**0 NULL**: 7.329.406 en agua, 18.527.695 en tierra ⇒ **71.65 %** tierra, coherente
+  con el 72.28 % de la muestra de FEAT-002). El `pandas_udf` de `global_land_mask`
+  (`compuertas._columna_en_agua`) **falló** en serverless (Spark Connect) sobre las 25.9M
+  filas y dejó `en_agua` en NULL; el camino que SÍ la materializó —**sin `pandas_udf`**—
+  clasifica las **726.513 celdas DISTINTAS** de la grilla (`round(LAT,2)`,`round(LON,2)`,
+  misma definición que `geo.celda_grilla`/ADR-001) con `global-land-mask==1.0.0` fuera de
+  Spark, escribe la tabla de referencia `oceanwatch.silver.celda_en_agua` y enriquece la
+  plata con un `MERGE` por celda. Statements reales: extracción
+  `01f1d9a8-7811-1519-84de-e57af6b08984`, MERGE `01f1d9a8-befe-18b5-a972-b7bcbfd6b468`,
+  verificación `01f1d9a8-c9cb-15b6-83b8-3d2cf7ab60e6`. La invariante de conciliación NO
+  cambió (bandera NULIFICAR-ATRIBUTO). Script `resources/sql/fase3_enriquecer_en_agua.sql`;
+  lógica reusable `materializar.enriquecer_en_agua_por_celda`. Evidencia completa en
+  `evidence/req02-capas-calidad/enriquecimiento_en_agua.md`.
 - **Reversibilidad:** la acción de la regla vive en `conf['calidad']['reglas']['coordenada_en_agua']
   ['accion']`; cambiarla a `descartar_fila` revierte la decisión sin tocar código. El método
   (`metodo`/`libreria`/`version`) también es parametrizable en `conf['calidad']['coordenada_en_agua']`.

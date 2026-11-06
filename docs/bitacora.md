@@ -17,6 +17,35 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 
 ## Entradas
 
+### 2026-11-05 — Fase 3: Materialización de la bandera `en_agua` en la plata (cierre de brecha) — Equipo OceanWatch
+- **Objetivo de la sesión:** poblar la bandera de calidad `en_agua` de
+  `oceanwatch.silver.ais_clean`, que había quedado en NULL tras FEAT-003.
+- **Qué se hizo (síntoma → causa → solución → verificación):**
+  - **Síntoma:** `en_agua` estaba **TODA en NULL** sobre las 25.857.101 filas de la plata.
+  - **Causa:** el `pandas_udf` de `global_land_mask` (`compuertas._columna_en_agua`) **falló**
+    en el cómputo **serverless** (Spark Connect) al evaluarse fila-a-partición sobre las ~25.9M
+    filas; la bandera quedó sin materializar.
+  - **Solución (sin `pandas_udf`):** clasificar las **726.513 celdas DISTINTAS** de la grilla
+    (`round(LAT,2)`,`round(LON,2)` — ADR-001/`geo.celda_grilla`), no las 25.9M filas. Extracción
+    local de las celdas vía SQL Statement Execution API (paginada), clasificación vectorizada con
+    `global-land-mask==1.0.0` local (`globe.is_land` sobre numpy), CSV subido al Volume
+    `oceanwatch.bronze.landing/ref/`, CTAS de la tabla de referencia
+    `oceanwatch.silver.celda_en_agua` (642.018 agua / 84.495 tierra) y `MERGE` que enriquece la
+    plata por join de celda. Script `resources/sql/fase3_enriquecer_en_agua.sql`; lógica reusable
+    `materializar.clasificar_celdas_en_agua` / `enriquecer_en_agua_por_celda`.
+  - **Verificación (conteos reales):** `no_null`=**25.857.101** (0 NULL), `en_agua_true`=**7.329.406**,
+    `en_tierra`=**18.527.695** ⇒ **71.65 %** tierra (coherente con el 72.28 % de la muestra de
+    FEAT-002). Invariante INTACTA: `25.857.101 + 39.734 + 658 = 25.897.493 = bronce` (diferencia 0);
+    la plata sigue en 25.857.101 filas. `python -m pytest -q` sigue **verde**.
+- **Decisiones/ADRs tocados:** ADR-010 §8 (verificación: bandera materializada). No cambia la
+  decisión de diseño (sigue NULIFICAR-ATRIBUTO, no descarta filas).
+- **Estado Verificado vs Diseñado:** **Verificado (ejecutado)**. Statements reales: extracción
+  `01f1d9a8-7811-1519-84de-e57af6b08984`, MERGE `01f1d9a8-befe-18b5-a972-b7bcbfd6b468`,
+  verificación `01f1d9a8-c9cb-15b6-83b8-3d2cf7ab60e6`.
+- **Evidencia:** `evidence/req02-capas-calidad/enriquecimiento_en_agua.md`.
+- **Pendientes / siguiente paso:** ninguno para esta brecha; la bandera queda materializada y la
+  tabla de referencia `silver.celda_en_agua` conservada. Fase 4 (Req. 3).
+
 ### 2026-11-05 — Fase 3: Verificación de integración entre FEATs (paso FIXER) — Equipo OceanWatch
 - **Objetivo de la sesión:** re-ejecutar, sin confiar en los `.md` previos, la verificación de
   integración extremo a extremo del Req. 2 (costuras FEAT-001 → FEAT-003 → FEAT-004 → FEAT-005)
@@ -31,8 +60,9 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
   previas (`ingesta_metricas`, `pruebas_fallos`) intactas.
 - **Decisiones/ADRs tocados:** ninguno nuevo; se ratifican ADR-009/010/011/012 con datos vivos.
   No hizo falta tocar código: las costuras entre FEATs ya cuadraban sobre los 25.9M reales.
-- **Estado Verificado vs Diseñado:** **Verificado (ejecutado)**. Único límite conocido: `en_agua`
-  en `null` (informativo, no afecta invariante ni limpieza de oro; procedimiento documentado).
+- **Estado Verificado vs Diseñado:** **Verificado (ejecutado)**. (En ese momento `en_agua` estaba
+  en `null`; informativo, no afecta invariante ni limpieza de oro. **Ya materializada**
+  posteriormente el 2026-11-05, ver entrada superior.)
 - **Evidencia:** `evidence/req02-capas-calidad/verificacion_integracion_feats.md`.
 - **Pendientes / siguiente paso:** cierre del bucle de convergencia (veredicto); Fase 4 (Req. 3).
 

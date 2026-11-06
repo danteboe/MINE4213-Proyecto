@@ -118,6 +118,16 @@ eliminaría ~72% del corpus legítimo. Decisión formalizada en
   que el **100%** de los registros sucios queda en cuarentena con su causa correcta y
   **ninguno** llega a silver ni a oro; los limpios de control sí atraviesan. Ver
   [`prueba_compuerta.md`](../evidence/req02-capas-calidad/prueba_compuerta.md).
+- Bandera `en_agua` **MATERIALIZADA** (2026-11-05): la columna `en_agua` de
+  `oceanwatch.silver.ais_clean` quedó poblada **sin NULLs** sobre las **25.857.101**
+  filas (**7.329.406** en agua, **18.527.695** en tierra ⇒ **71.65 %** tierra, coherente
+  con el 72.28 % de la muestra de FEAT-002). Se pobló SIN `pandas_udf` (que falló en
+  serverless): clasificando las **726.513 celdas distintas** de la grilla con
+  `global-land-mask==1.0.0` fuera de Spark, materializando la tabla de referencia
+  `oceanwatch.silver.celda_en_agua` y enriqueciendo la plata por `MERGE` de celda. La
+  invariante de conciliación NO cambió (bandera nulificadora). Ver
+  [`enriquecimiento_en_agua.md`](../evidence/req02-capas-calidad/enriquecimiento_en_agua.md)
+  y [ADR-010 §8](adr/ADR-010-mascara-tierra-agua.md).
 
 ## Referencias
 
