@@ -79,6 +79,24 @@ esquema_ais:   # 17 campos, esquema explícito (continuidad Entrega 1)
 gold:
   grilla_espacial: "redondeo_latlon"   # decisión Fase 1: NO H3 (ver ADR-001)
   decimales_grilla: 2
+  # Capa ORO (Req. 2, FEAT-004): nombres de las tablas resultado y de la tabla de
+  # referencia World Port Index. El oro se alimenta SOLO de oceanwatch.silver.ais_clean
+  # (el oro NO limpia). SIN secretos.
+  tabla_trayectorias: "trayectorias_diarias"      # oceanwatch.gold.trayectorias_diarias (1 fila por MMSI+día)
+  tabla_presencia_puertos: "presencia_puertos"    # oceanwatch.gold.presencia_puertos (1 fila por MMSI+puerto+día)
+  tabla_matriz_trafico: "matriz_trafico"          # oceanwatch.gold.matriz_trafico (1 fila por celda+hora)
+  tabla_wpi: "world_port_index"                   # oceanwatch.gold.world_port_index (tabla de referencia, ~3.669 puertos)
+  # Regla geoespacial de 'en puerto' (ADR-012). Una posición AIS se considera
+  # 'en puerto' si cae en la MISMA celda de grilla (lat/lon a decimales_grilla=2)
+  # que algún puerto del WPI, es decir, dentro de un radio efectivo < ~1.6 km del
+  # puerto (media celda ~0.55 km en cada eje a 2 decimales). Join por celda =
+  # consistente con ADR-001 (grilla por redondeo, NO H3) y barato a 25.9M filas.
+  presencia_puertos_param:
+    decimales_celda_puerto: 2            # redondeo lat/lon de puerto y de posición (ratifica ADR-001)
+    permanencia_minima_posiciones: 3     # nº mínimo de posiciones AIS del buque en la celda-puerto ese día
+    # Justificación del umbral de permanencia (ADR-012): a P50 del intervalo de
+    # reporte AIS, 3 posiciones en una misma celda-puerto evitan contar un simple
+    # tránsito (1-2 pings) como 'presencia en puerto'. Parametrizable.
 
 # Capa PLATA (Req. 2, FEAT-003): nombres de las tablas resultado y parámetros de
 # materialización. SIN secretos. Reutiliza ingesta.watermark_dedup y clave_dedup
