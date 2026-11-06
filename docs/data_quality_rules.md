@@ -26,6 +26,7 @@ con expectativas estilo `expect` / `expect_or_drop`.
 | `cog_valido` | v1 | `reglas.cog_valido` / `cog_es_centinela` | `cog.centinela`=360, [0,359] | nulificar-atributo | COG=360 = **4.376.798** (~16.9%) |
 | `dimension_fisica` | v1 | `reglas.dimension_fisica` | valor > `dimensiones.min_exclusivo`=0 | nulificar-atributo | Length≤0=**905.785**, Width≤0=**967.816**, Draft≤0=**1.180.265** |
 | `imo_valido` | v1 | `identificadores.imo_valido` | `imo.digitos`=7; vacío VÁLIDO; check digit | nulificar-atributo | IMO vacío = **11.015.974** (~42.5%); vacío es válido |
+| `coordenada_en_agua` | v1 | `tierra_agua.en_agua` (baseline `en_agua_bbox`) | `coordenada_en_agua.metodo`=`global_land_mask` v1.0.0; baseline `bbox_agua` | nulificar-atributo | **72.28%** de la muestra AIS cae "en tierra" (puertos/canales válidos); medición real run `614704376036187` |
 
 Funciones geoespaciales de apoyo (para la capa oro, no son reglas de calidad):
 `geo.haversine_km` (distancia great-circle, radio 6371 km) y `geo.celda_grilla`
@@ -84,6 +85,23 @@ esquema de numeración IMO ([OMI, Resolución A.1117(30)](https://www.imo.org), 
 2026-11-05): la suma de los 6 primeros dígitos multiplicados por 7,6,5,4,3,2 tiene como
 unidad el 7.º dígito. Patrón inválido => nulificar atributo (la fila pasa).
 
+### `coordenada_en_agua` (v1) — nulificar-atributo
+Máscara tierra/agua: ¿la posición cae en el agua? Método principal
+`global-land-mask==1.0.0` (máscara ráster global ~1/120°, `globe.is_land(lat,lon)`),
+instalado vía `%pip install` pinneado en el notebook serverless porque **no** viene
+preinstalado ([disponibilidad de librerías](../evidence/req02-capas-calidad/disponibilidad_librerias_serverless.md));
+baseline `en_agua_bbox` sin dependencias como salvaguarda. La **medición real** en
+serverless (run `614704376036187`, SUCCESS;
+[evidencia](../evidence/req02-capas-calidad/mascara_tierra_agua.md)) dio costo de
+instalación+import ≈3.65 s, clasificación de 60.000 puntos en 0.006 s, y **0 falsos
+positivos / 0 falsos negativos** contra la verdad de referencia (océano abierto vs
+tierra adentro), pero **72.28%** de la muestra AIS clasificada como "tierra" porque la
+máscara de costa marca como tierra los puertos y aguas interiores navegables (Houston
+Ship Channel, delta del Mississippi, Puget Sound) que son tráfico AIS **válido**. Por
+eso la acción es **nulificar-atributo** (bandera `en_agua`), NO descartar: descartar
+eliminaría ~72% del corpus legítimo. Decisión formalizada en
+[ADR-010](adr/ADR-010-mascara-tierra-agua.md).
+
 ## Verificación
 
 - Local: `pytest -q` (tests de `test_reglas.py`, `test_identificadores.py`,
@@ -93,4 +111,6 @@ unidad el 7.º dígito. Patrón inválido => nulificar atributo (la fila pasa).
 ## Referencias
 
 - [ADR-009 — Catálogo de reglas de calidad](adr/ADR-009-catalogo-reglas-calidad.md)
+- [ADR-010 — Máscara tierra/agua](adr/ADR-010-mascara-tierra-agua.md)
 - [Diagnóstico de calidad real sobre bronce](../evidence/req02-capas-calidad/diagnostico_calidad_bronce.md)
+- [Medición de la máscara tierra/agua en serverless](../evidence/req02-capas-calidad/mascara_tierra_agua.md)

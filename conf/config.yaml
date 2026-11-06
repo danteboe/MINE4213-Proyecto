@@ -122,6 +122,19 @@ calidad:
   # Dimensiones estáticas del buque (metros). Valor <= 0 es no físico.
   dimensiones:
     min_exclusivo: 0.0         # Length/Width/Draft deben ser > 0
+  # Máscara tierra/agua (ADR-010, FEAT-002). Una posición AIS tierra adentro es casi
+  # seguro un error de posición. Método principal: global-land-mask (máscara ráster
+  # global ~1/120°) instalada vía %pip pinneado en el notebook serverless (NO viene
+  # preinstalada, ver evidence/.../disponibilidad_librerias_serverless.md). Baseline
+  # sin dependencias (bbox) como salvaguarda. Acción decidida en ADR-010.
+  coordenada_en_agua:
+    metodo: "global_land_mask"       # método principal (ADR-010)
+    libreria: "global-land-mask"     # paquete PyPI a instalar en serverless
+    version: "1.0.0"                 # versión pinneada por reproducibilidad
+    # Cajas delimitadoras de agua para el baseline SIN dependencias (salvaguarda).
+    # [lat_min, lat_max, lon_min, lon_max] en grados decimales.
+    bbox_agua:
+      - [-80.0, 80.0, -180.0, 180.0]
   # Nombre estable, versión y acción por regla (consumido por FEAT-003).
   reglas:
     coordenadas_en_rango:
@@ -162,5 +175,15 @@ calidad:
       accion: "nulificar_atributo"
     imo_valido:
       nombre: "imo_valido"
+      version: "v1"
+      accion: "nulificar_atributo"
+    coordenada_en_agua:              # ADR-010 (FEAT-002): NULIFICAR_ATRIBUTO (bandera en_agua).
+      # La medición real (60.000 filas, run 614704376036187) dio 72.28% de la muestra AIS
+      # clasificada como "tierra" porque la máscara ráster ~1/120° marca como tierra los
+      # canales de navegación y puertos interiores (p.ej. Houston Ship Channel 29.8/-95.1,
+      # Nueva Orleans/delta del Mississippi) que son tráfico AIS VÁLIDO. Descartar esas
+      # filas destruiría la mayoría del corpus; por eso la acción es NULIFICAR_ATRIBUTO:
+      # la fila pasa y se marca la bandera en_agua para que el consumidor decida.
+      nombre: "coordenada_en_agua"
       version: "v1"
       accion: "nulificar_atributo"
