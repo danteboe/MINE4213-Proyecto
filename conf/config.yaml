@@ -198,14 +198,14 @@ ml:
   features_orden: ["z_sog", "delta_sog", "hora_sin", "hora_cos"]
   # Versiones de las librerías ML que se instalan con %pip PINNEADO dentro del notebook
   # serverless (reproducibilidad, D7). NO son dependencias locales de pyproject: solo
-  # existen en el runtime de Databricks. Las versiones EXACTAS se fijan tras la 1a
-  # corrida real del notebook de entrenamiento (FEAT-002), que resuelve lo disponible
-  # en el runtime; hasta entonces estos valores son PENDIENTE DE EJECUCIÓN (placeholder).
+  # existen en el runtime de Databricks. Versiones EXACTAS resueltas y VERIFICADAS en la
+  # 1a corrida real del notebook de entrenamiento (FEAT-002, run one-time 347173419720341,
+  # task run 386348858221273, 2026-11-05; runtime serverless Python 3.11.10).
   pip_pins:
-    mlflow: "PENDIENTE_FEAT002"        # versión exacta tras la 1a corrida real
-    scikit-learn: "PENDIENTE_FEAT002"
-    numpy: "PENDIENTE_FEAT002"
-    pandas: "PENDIENTE_FEAT002"
+    mlflow: "3.18.0"          # resuelto por %pip en serverless (FEAT-002)
+    scikit-learn: "1.3.0"     # resuelto por %pip en serverless (FEAT-002)
+    numpy: "1.26.4"           # preinstalado en el runtime serverless (FEAT-002)
+    pandas: "1.5.3"           # preinstalado en el runtime serverless (FEAT-002)
 
 quarantine:
   tabla_rejected: "ais_rejected"       # oceanwatch.quarantine.ais_rejected (registro original + causas + fechas)
