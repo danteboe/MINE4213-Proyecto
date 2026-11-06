@@ -1,0 +1,35 @@
+# =============================================================================
+# Databricks Asset Bundle (DAB) — OceanWatch Analytics, Entrega 2 (Req. 3, Fase 4).
+# =============================================================================
+# Define el Job de orquestación COMO CÓDIGO versionado. SIN secretos: el host y el
+# token NO se escriben aquí. El host se toma del perfil de la CLI (databricks auth)
+# o de las variables de entorno DATABRICKS_HOST/DATABRICKS_TOKEN, que se exportan
+# FUERA del repo desde databricks.key. `databricks bundle validate` usa ese perfil/ENV.
+# Las definiciones de los jobs viven en resources/jobs/*.yml (incluidas abajo).
+# =============================================================================
+bundle:
+  name: oceanwatch_entrega2
+
+include:
+  - resources/jobs/*.yml
+
+# Variable del workspace raíz donde ya está importado el repo (conf/notebooks/src/resources).
+# Se usa para construir las rutas de los notebook_task del Job.
+variables:
+  workspace_oceanwatch:
+    description: "Raíz del repo importado en el workspace de Databricks."
+    default: "/Workspace/Users/jd.torresa1@uniandes.edu.co/oceanwatch"
+
+targets:
+  # Único target: el workspace serverless del curso. El host y el token se resuelven
+  # por la variable de entorno DATABRICKS_HOST/DATABRICKS_TOKEN (exportadas FUERA del
+  # repo desde databricks.key) o por el perfil de la CLI. NO se hardcodean aquí:
+  # la interpolación de ${...} NO está permitida en workspace.host (campo de autenticación).
+  produccion:
+    default: true
+    mode: production
+    workspace:
+      # Ruta única de despliegue del bundle (exigida por mode: production). Es una
+      # subcarpeta de artefactos del bundle, distinta del repo ya importado en
+      # /Users/.../oceanwatch (los notebook_task apuntan a ese repo vía la variable).
+      root_path: /Workspace/Users/jd.torresa1@uniandes.edu.co/.bundle/${bundle.name}/${bundle.target}

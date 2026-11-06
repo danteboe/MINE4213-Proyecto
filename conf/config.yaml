@@ -76,6 +76,44 @@ esquema_ais:   # 17 campos, esquema explícito (continuidad Entrega 1)
   - { nombre: "Cargo", tipo: "int" }
   - { nombre: "TransceiverClass", tipo: "string" }
 
+# Orquestación (Req. 3, Fase 4). Define el Job de Databricks que orquesta el
+# pipeline ya construido y verificado en fases 1-3. SIN secretos (host/token viven
+# FUERA del repo, en databricks.key). Cada valor se justifica abajo en español.
+orquestacion:
+  # Nombre del Job (entregable A); se usa como job name en el DAB/JSON.
+  nombre_job: "oceanwatch_pipeline_entrega2"
+  # Parámetro que fluye a las 4 tareas vía {{job.parameters.fecha_proceso}}.
+  # Default = 2023-06-03 (último día del corpus verificado de Fase 2). Un backfill
+  # usa una fecha pasada (p. ej. 2023-06-01). Formato YYYY-MM-DD (ingest.paths._validar_fecha).
+  fecha_proceso_default: "2023-06-03"
+  # Tabla de auditoría de ejecuciones del Job (una fila por corrida+tarea). NO se
+  # modifica ninguna tabla existente; es una tabla NUEVA en el esquema quality.
+  tabla_auditoria:
+    esquema: "quality"                 # oceanwatch.quality.ejecuciones_job
+    objeto: "ejecuciones_job"
+  # Cron de PRODUCCIÓN (Quartz, 6 campos): 06:00 America/Bogota a diario. 06:00
+  # Bogota = 11:00 UTC; margen cómodo tras la publicación diaria del feed AIS de NOAA.
+  # Se crea PAUSED (pause_status) para no disparar corridas no deseadas al desplegar.
+  cron_produccion: "0 0 6 * * ?"
+  # Cron de DEMOSTRACIÓN (alta frecuencia): cada 5 minutos. Se activa ~15 min en
+  # FEAT-002 para capturar 2-3 corridas SCHEDULED reales y luego se restablece producción.
+  cron_demostracion: "0 */5 * * * ?"
+  # Serverless usa UTC por defecto (ADR-004); el Quartz cron del Job respeta timezone_id.
+  timezone: "America/Bogota"
+  # Reintentos por tarea. Justificación: ingesta toca red NOAA y arranque serverless
+  # (fallos transitorios) -> 2 reintentos; plata/oro recomputan determinísticamente
+  # (CREATE OR REPLACE) -> 1 reintento ante un fallo transitorio de arranque;
+  # conciliación es la COMPUERTA Write-Audit-Publish: que el invariante no cuadre NO
+  # es transitorio, reintentar a ciegas no lo arregla -> 0 reintentos (falla el Job).
+  reintentos:
+    ingesta: { max_retries: 2, min_retry_interval_millis: 60000 }
+    plata_calidad: { max_retries: 1, min_retry_interval_millis: 60000 }
+    oro: { max_retries: 1, min_retry_interval_millis: 60000 }
+    conciliacion: { max_retries: 0, min_retry_interval_millis: 0 }
+  # Notificaciones de correo del Job (on_success/on_failure/on_duration_warning).
+  emails_notificacion:
+    - "jd.torresa1@uniandes.edu.co"
+
 gold:
   grilla_espacial: "redondeo_latlon"   # decisión Fase 1: NO H3 (ver ADR-001)
   decimales_grilla: 2
