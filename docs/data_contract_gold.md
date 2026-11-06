@@ -52,7 +52,7 @@ haversine (R=6371 km) entre posiciones consecutivas (`LAG` por `(MMSI, dia)`).
 | `distancia_total_km` | DOUBLE | Suma haversine de distancias entre posiciones consecutivas. |
 | `primera_posicion` | TIMESTAMP | Primer `BaseDateTime` del día. |
 | `ultima_posicion` | TIMESTAMP | Último `BaseDateTime` del día. |
-| `duracion_horas` | DOUBLE | `(ultima - primera)` en horas. |
+| `duracion_horas` | DECIMAL(27,6) | `(ultima - primera)` en horas (tipo REAL verificado por `DESCRIBE TABLE EXTENDED`, 2026-11-05). |
 | `lat_min`, `lat_max` | DOUBLE | *Bounding box* de latitud. |
 | `lon_min`, `lon_max` | DOUBLE | *Bounding box* de longitud. |
 
@@ -143,10 +143,36 @@ escribe **1 fila por posición anómala** (`es_anomalia = true`). Tabla Delta, `
   (`overwriteSchema=true`) desde el notebook. Reejecutar regenera el estado.
 - Reglas de negocio versionadas por parámetros en `conf/config.yaml` (bloque `gold`).
 
-## PENDIENTE - Fase 5 (gobernanza y evolución futura)
+## Gobernanza (Fase 5, Req. 5 — ADR-018)
 
-- Gobernanza de Unity Catalog (grants, *lineage* formal, *tags* de clasificación).
+Estado: **Verificado (ejecutado)** el 2026-11-05 sobre el warehouse serverless
+`377600528fed7c47`. La gobernanza de la capa oro se apoya en tres mecanismos de Unity
+Catalog, todos ejecutados y verificados (no diseñados):
+
+- **Permisos de mínimo privilegio (RBAC).** El acceso a `oceanwatch.gold` se concede a
+  **grupos de cuenta**, no a usuarios (ADR-018). La capa de servicio `gold` la leen los 4
+  grupos de rol: `oceanwatch_ingenieria_datos` (SELECT+MODIFY), `oceanwatch_analistas` y
+  `oceanwatch_ciencia_datos` (SELECT), y `oceanwatch_consumidores_dashboard` (SELECT, única
+  capa que ve este rol). `bronze`/`quarantine` **no** son visibles para el rol de dashboard.
+  Matriz completa y salida real de `SHOW GRANTS` en
+  `evidence/req05-gobernanza/permisos_rbac.md`.
+- **Linaje verificado por API.** Las 6 tablas de oro quedan trazadas aguas arriba hasta
+  `silver.ais_clean` ← `bronze.ais_raw` ← volumen `bronze.landing`, y
+  `gold.presencia_puertos` suma como *upstream* `gold.world_port_index`;
+  `gold.matriz_trafico_diaria` es *downstream* de `gold.matriz_trafico`. Verificado con
+  `GET /api/2.0/lineage-tracking/table-lineage` y `.../column-lineage`
+  (`gold.trayectorias_diarias.MMSI` ← `silver.ais_clean.MMSI`). JSON real en
+  `evidence/req05-gobernanza/linaje.md`. El screenshot de Catalog Explorer queda
+  **PENDIENTE DE CAPTURA** (requiere navegador autenticado).
+- **Documentación en el securable.** Cada tabla y columna clave de este contrato tiene su
+  `COMMENT` aplicado en el metastore (`resources/sql/fase5_comentarios_oro.sql`), visible por
+  `DESCRIBE TABLE EXTENDED` e `information_schema`. Evidencia en
+  `evidence/req05-gobernanza/comentarios_oro.md`.
+
+### Evolución futura (deuda reconocida, fuera del alcance de la Fase 5)
+
 - Política de evolución de esquema del oro (compatibilidad, *constraints* Delta,
   expectativas de calidad sobre el oro).
+- *Tags* de clasificación de datos en Unity Catalog.
 - SCD / historización de la dimensión `world_port_index` si el WPI se actualiza.
 - Posible filtro de continuidad/velocidad en plata para sanear `distancia_total_km`.

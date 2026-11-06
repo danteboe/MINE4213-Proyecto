@@ -17,6 +17,63 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 
 ## Entradas
 
+### 2026-11-05 — Fase 5: Gobernanza (Req. 5) — Equipo OceanWatch
+- **Objetivo de la sesión:** cerrar el Req. 5 con **evidencia real**: gobernanza efectiva del
+  lakehouse sobre Unity Catalog — permisos de **mínimo privilegio** por rol, **linaje**
+  verificado por API y **documentación en el securable** (comentarios de tabla/columna),
+  ejecutado de verdad en serverless, no sólo diseñado.
+- **Qué se hizo:**
+  - **4 grupos de rol + grants de mínimo privilegio (FEAT-001):** se crearon como **grupos de
+    cuenta** (account groups, vía `POST /api/2.0/account/scim/v2/Groups`; los *workspace-local*
+    fallan en UC con `PRINCIPAL_DOES_NOT_EXIST`): `oceanwatch_ingenieria_datos` (80978239208281),
+    `oceanwatch_analistas` (87920639605010), `oceanwatch_ciencia_datos` (83869049126007),
+    `oceanwatch_consumidores_dashboard` (82369926225593), creados **vacíos**.
+    `resources/sql/fase5_permisos.sql` ejecutó **18 sentencias, 0 FAIL** sobre el warehouse
+    `377600528fed7c47`. Matriz verificada por `SHOW GRANTS`: `USE CATALOG` a los 4 grupos;
+    `bronze`/`quarantine` sólo ingeniería (USE SCHEMA+SELECT+MODIFY); `silver`/`gold`/`quality`
+    ingeniería(full)+analistas(SELECT)+ciencia(SELECT) (y `gold` también consumidores_dashboard
+    SELECT); `ml` ingeniería(full)+ciencia(full). **0 grants** sobre `account users`/`admins`
+    (sólo AÑADE).
+  - **Linaje verificado por API (FEAT-001):** `GET /api/2.0/lineage-tracking/table-lineage` y
+    `.../column-lineage` (el `POST` da 404). `silver.ais_clean` ← `bronze.ais_raw` +
+    `silver.celda_en_agua`, → las 4 tablas de oro; `bronze.ais_raw` ← Volume `bronze.landing`;
+    `gold.presencia_puertos` ← `silver.ais_clean` + `gold.world_port_index`;
+    `gold.trayectorias_diarias.MMSI` ← `silver.ais_clean.MMSI`.
+  - **Comentarios de oro en el securable (FEAT-002):** `resources/sql/fase5_comentarios_oro.sql`
+    aplicó **43 sentencias `COMMENT ON TABLE/COLUMN`, 0 FAIL** (idempotente, no destructivo).
+    Las 4 tablas de oro sin comentar (`world_port_index`, `trayectorias_diarias`,
+    `presencia_puertos`, `matriz_trafico`) quedaron documentadas; se completaron las columnas de
+    `matriz_trafico_diaria` (su comentario de tabla de Fase 7 se preservó); `anomalias_velocidad`
+    no se tocó. Verificado por `DESCRIBE TABLE EXTENDED` e `information_schema`.
+  - **Contrato de oro consolidado:** `docs/data_contract_gold.md` corrige
+    `gold.trayectorias_diarias.duracion_horas` de `DOUBLE` a **`DECIMAL(27,6)`** (tipo REAL
+    verificado) y reemplaza la sección "PENDIENTE - Fase 5" por una sección de **Gobernanza**
+    que referencia grants (ADR-018), linaje por API y comentarios aplicados.
+  - **Documentación + trazabilidad:** ADR-018 (9 secciones, Aceptado), fila Req. 5 de la matriz
+    a **Verificado (ejecutado)** con ADR-002 + ADR-018, esta entrada y evidencia nueva.
+- **Decisiones/ADRs tocados:** **ADR-018** (gobernanza: grants de mínimo privilegio a grupos +
+  linaje de UC + documentación en el securable), que salda la deuda "PENDIENTE - Fase 5" de
+  **ADR-002** (un catálogo, un esquema por capa) y la cita como habilitador del GRANT por capa.
+- **Estado Verificado vs Diseñado:** **Verificado (ejecutado)** = 4 grupos de cuenta, 18 grants
+  (0 FAIL) con matriz confirmada por `SHOW GRANTS`, linaje real por API (tabla y columna) y 43
+  comentarios de oro (0 FAIL) confirmados por `DESCRIBE`/`information_schema`. **PENDIENTE DE
+  CAPTURA:** únicamente el **screenshot** del grafo de linaje en Catalog Explorer (requiere
+  navegador autenticado, no automatizable; procedimiento documentado en `linaje.md`).
+- **Síntoma→causa→solución (callejones reales):**
+  - *Grupos que no reciben grants:* síntoma = `GRANT` fallaba con `PRINCIPAL_DOES_NOT_EXIST`;
+    causa = `databricks groups create` genera grupos **workspace-local** que UC no reconoce;
+    solución = recrearlos como **grupos de cuenta** por el SCIM de cuenta.
+  - *`COMMENT` con `PARSE_SYNTAX_ERROR`:* síntoma = varias sentencias del `.sql` de comentarios
+    fallaban; causa = el ejecutor por lotes divide por `;` y algunos textos de `COMMENT` tenían
+    `;` internos; solución = reescribir esos textos sin `;` → 43/43 `OK`.
+- **Evidencia:** `evidence/req05-gobernanza/` — `permisos_rbac.md`, `linaje.md`,
+  `comentarios_oro.md` (y `bootstrap_unity_catalog.md` de la Fase 2). Código:
+  `resources/sql/fase5_permisos.sql`, `resources/sql/fase5_comentarios_oro.sql`. Docs: ADR-018,
+  `docs/data_contract_gold.md` (sección Gobernanza), `docs/traceability_matrix.md` (fila Req. 5).
+- **Pendientes / siguiente paso:** que el equipo capture el **screenshot** de linaje en Catalog
+  Explorer (procedimiento en `linaje.md`). Deuda reconocida en ADR-018 §7: *tags* de
+  clasificación y política de evolución de esquema del oro (fuera del alcance de la Fase 5).
+
 ### 2026-11-05 — Fase 6: ML con MLflow (Req. 6) — Equipo OceanWatch
 - **Objetivo de la sesión:** cerrar el Req. 6 con **evidencia real**: implementar el caso de ML
   ya fijado por ADR-005 (detección de anomalías de velocidad SOG), demostrando la **integración
