@@ -42,7 +42,7 @@ conciliación → oro, con su cron y monitoreo) está diagramada en
 | 3 | 20% | Orquestación | **Verificado (ejecutado)** — Fase 4 |
 | 4 | 15% | Dashboard | Pendiente |
 | 5 | 10% | Gobernanza | Diseñado (Fase 1); implementación pendiente |
-| 6 | 10% | ML con MLflow | Diseñado (Fase 1); implementación pendiente |
+| 6 | 10% | ML con MLflow | **Verificado (ejecutado)** — Fase 6 |
 | 7 | 5% | Repo + bitácora | **Fase 1 en progreso** |
 | 8 | 10% | Sustentación | Pendiente |
 
@@ -102,8 +102,11 @@ documenta en [ADR-002](docs/adr/ADR-002-convenciones-nombres-catalogo-esquemas.m
    `notebooks/fase2_ingesta_streaming` como one-time run serverless; carga los CSV AIS de NOAA a
    `oceanwatch.bronze.ais_raw` (evidencia en `evidence/req01-streaming/`). Pruebas de tolerancia a
    fallos en `notebooks/fase2_pruebas_fallos`.
-5. **Fases siguientes:** capas/calidad y oro (Fase 3), orquestación (Fase 4), dashboard, ML y
-   sustentación.
+5. **Capas/calidad y oro (Fase 3)**, **orquestación (Fase 4)** y **ML de anomalías SOG con MLflow
+   (Fase 6):** ejecutados y verificados en serverless. El ML corre como quinta tarea `ml_anomalias`
+   del Job (depende de `oro`): carga el modelo `@champion` de Unity Catalog y puebla
+   `oceanwatch.gold.anomalias_velocidad` (evidencia en `evidence/req06-ml-mlflow/`).
+6. **Fases siguientes:** dashboard (Req. 4) y sustentación.
 
 ## Requisitos previos
 
