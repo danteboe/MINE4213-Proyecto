@@ -105,8 +105,19 @@ eliminaría ~72% del corpus legítimo. Decisión formalizada en
 ## Verificación
 
 - Local: `pytest -q` (tests de `test_reglas.py`, `test_identificadores.py`,
-  `test_geo.py`) — ejecutado: 57 passed, 1 skipped.
-- Real (conteos de cuarentena y conciliación): PENDIENTE DE EJECUCIÓN en FEAT-003.
+  `test_geo.py`, `test_conciliacion.py`, `test_prueba_compuerta.py`) — ejecutado:
+  **76 passed, 4 skipped**.
+- Real (conteos de cuarentena y conciliación): **Verificado (ejecutado)** en FEAT-003
+  (serverless, 2026-11-05). La materialización de plata/cuarentena/métricas dio
+  silver=**25.857.101**, cuarentena=**39.734** (causa `mmsi_mid_valido`=39.734,
+  `mmsi_bien_formado`=21.958) y el invariante bronce=plata+cuarentena+658 cuadra
+  (diferencia 0). Ver
+  [`materializacion_plata.md`](../evidence/req02-capas-calidad/materializacion_plata.md)
+  e [`invariante_conciliacion.md`](../evidence/req02-capas-calidad/invariante_conciliacion.md).
+- Compuerta extremo a extremo (FEAT-005): la prueba de inyección de sucios demostró
+  que el **100%** de los registros sucios queda en cuarentena con su causa correcta y
+  **ninguno** llega a silver ni a oro; los limpios de control sí atraviesan. Ver
+  [`prueba_compuerta.md`](../evidence/req02-capas-calidad/prueba_compuerta.md).
 
 ## Referencias
 

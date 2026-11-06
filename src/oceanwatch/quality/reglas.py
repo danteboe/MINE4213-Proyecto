@@ -183,3 +183,46 @@ def dimension_fisica(valor: Numero) -> bool:
     if f is None:
         return False
     return f > 0.0
+
+
+def causas_de_descarte(registro: dict[str, Any], cfg: dict[str, Any], ahora: datetime) -> list[str]:
+    """Nombres de las reglas de DESCARTE violadas por ``registro`` (versión PURA).
+
+    Reproduce fielmente la columna ``causas`` que ``aplicar_compuertas`` construye
+    con expresiones de Spark (FEAT-003) y que el CTAS de
+    ``resources/sql/fase3_materializar_plata.sql`` materializa, pero sobre valores
+    escalares de Python, para poder verificarla en ``pytest`` sin Spark (complemento
+    local de la prueba de compuerta serverless, FEAT-005).
+
+    Orden de las causas = orden del array nativo (coordenadas_en_rango,
+    coordenada_no_centinela, mmsi_bien_formado, mmsi_mid_valido,
+    timestamp_valido_no_futuro). Una lista vacía significa que la fila pasa a plata.
+    Las reglas de nulificar-atributo NO entran aquí (la fila pasa; solo se nulifica
+    el atributo + bandera), igual que en la materialización.
+
+    Args:
+        registro: dict con al menos ``LAT``, ``LON``, ``MMSI`` y ``BaseDateTime``.
+        cfg: configuración (``cfg['calidad']``, con los nombres estables de reglas).
+        ahora: instante de referencia para la regla de timestamp (UTC, ADR-004).
+    """
+    # Import local para no crear un ciclo con identificadores en tiempo de import.
+    from oceanwatch.quality.identificadores import mmsi_bien_formado, mmsi_mid_valido
+
+    reglas = cfg["calidad"]["reglas"]
+    lat = registro.get("LAT")
+    lon = registro.get("LON")
+    mmsi = registro.get("MMSI")
+    ts = registro.get("BaseDateTime")
+
+    causas: list[str] = []
+    if not coordenadas_en_rango(lat, lon, cfg):
+        causas.append(reglas["coordenadas_en_rango"]["nombre"])
+    if es_centinela_coordenada(lat, lon, cfg):
+        causas.append(reglas["coordenada_no_centinela"]["nombre"])
+    if not mmsi_bien_formado(mmsi, cfg):
+        causas.append(reglas["mmsi_bien_formado"]["nombre"])
+    if not mmsi_mid_valido(mmsi, cfg):
+        causas.append(reglas["mmsi_mid_valido"]["nombre"])
+    if not timestamp_valido_no_futuro(ts, ahora):
+        causas.append(reglas["timestamp_valido_no_futuro"]["nombre"])
+    return causas

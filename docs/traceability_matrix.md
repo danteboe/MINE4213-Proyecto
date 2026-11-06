@@ -6,7 +6,7 @@ donde aplican; el resto queda "Pendiente" para fases posteriores.
 | Req | Peso | Criterio de aceptación | ADR(s) | Código | Evidencia | Bitácora | Estado |
 |---|---|---|---|---|---|---|---|
 | 1 | 15% | Ingesta incremental de zips NOAA vía descompresión + Auto Loader con esquema explícito, resistencia a archivos nuevos y tolerancia a fallos | ADR-003, ADR-004, ADR-006, ADR-007, ADR-008 | `src/oceanwatch/ingest/` (schema, paths, download, autoloader, dedup) + `notebooks/fase2_*` | `evidence/req01-streaming/` (ejecucion_ingesta, pruebas_tolerancia_fallos, justificacion_availablenow, verificacion_esquema_real) | 2026-11-05 | Verificado (ejecutado) |
-| 2 | 15% | Capas medallion con reglas de calidad y cuarentena | ADR-001 | `src/oceanwatch/quality/`, `gold/` (esqueleto) | `evidence/req02-capas-calidad/` | 2026-11-05 | Pendiente |
+| 2 | 15% | Capas medallion con reglas de calidad y cuarentena | ADR-001, ADR-006, ADR-009, ADR-010, ADR-011, ADR-012 | `src/oceanwatch/quality/` + `src/oceanwatch/gold/` + `notebooks/fase3_*` + `resources/sql/fase3_*` | `evidence/req02-capas-calidad/` (diagnostico, disponibilidad_librerias, mascara_tierra_agua, materializacion_plata, invariante_conciliacion, capa_oro, prueba_compuerta) | 2026-11-05 | Verificado (ejecutado) |
 | 3 | 20% | Orquestación por Job con cron UTC e idempotencia | ADR-004 | `resources/jobs/` | `evidence/req03-orquestacion/` | 2026-11-05 | Pendiente |
 | 4 | 15% | Dashboard de Databricks sobre tablas de oro | ADR-001 | `resources/dashboards/` | `evidence/req04-dashboard/` | 2026-11-05 | Pendiente |
 | 5 | 10% | Gobernanza UC: catálogo/esquemas/volúmenes, comentarios y GRANTs | ADR-002 | `resources/sql/bootstrap_oceanwatch.sql` | `evidence/req05-gobernanza/` | 2026-11-05 | Diseñado (no ejecutado) |
