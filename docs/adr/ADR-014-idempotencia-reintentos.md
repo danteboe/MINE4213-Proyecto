@@ -90,8 +90,7 @@ por tarea con `min_retry_interval_millis`, calibrados por la naturaleza del fall
 - Deuda asumida: el backfill actual reconstruye las capas completas (no particiona por
   fecha dentro de plata/oro); una materialización incremental por partición sería una
   optimización futura. La validación de los reintentos y de la compuerta con corridas
-  reales (incluida una corrida que falla a propósito) es **PENDIENTE DE EJECUCIÓN**
-  (FEAT-002), con el procedimiento exacto en el runbook.
+  reales ya se ejecutó (FEAT-002; ver §8).
 
 ## 8. Cómo se verifica / reversibilidad
 
@@ -100,10 +99,18 @@ por tarea con `min_retry_interval_millis`, calibrados por la naturaleza del fall
   (`tests/test_orquestacion.py`); la tabla de auditoría se creó idempotente
   (`CREATE TABLE IF NOT EXISTS`, reejecutable) y los conteos de las tablas del pipeline
   quedaron intactos (`tabla_auditoria.md`).
-- Verificación (PENDIENTE DE EJECUCIÓN, FEAT-002): (a) backfill idempotente = correr dos
-  veces `fecha_proceso=2023-06-01` y comprobar conteos estables; (b) reintento = provocar
-  un fallo transitorio en ingesta y ver 1-2 reintentos; (c) compuerta = forzar un
-  invariante que no cuadre y ver el Job FALLAR en `conciliacion` sin ejecutar `oro`.
+- Verificación (EJECUTADO, FEAT-002; `job_id` 202547459111516): (a) **idempotencia** =
+  re-correr `fecha_proceso=2023-06-03` (`run_id` base 249039226964396 y re-corrida
+  768406241318622, ambas SUCCESS) dejó los conteos IGUALES (bronce 25.897.493, plata
+  25.857.101, cuarentena 39.734, oro trayectorias 61.768 / presencia 9.153 / matriz
+  2.319.365); (b) **backfill** = `fecha_proceso=2023-06-01` (`run_id` 406283395698923,
+  SUCCESS) mantuvo los conteos estables y el invariante cuadrando
+  (25.857.101 + 39.734 + 658 = 25.897.493); (c) **reintento** real = job efímero de una
+  tarea `max_retries:1` (`run_id` 626548229252476) con attempt 0 FAILED
+  (789377104890365) seguido de attempt 1 SUCCESS (1054283792195712); la **compuerta**
+  (conciliación `max_retries:0`) terminó SUCCESS en las 3 corridas porque el invariante
+  cuadró — de no cuadrar habría hecho `raise` y fallado el Job antes de `oro`. Evidencia:
+  `evidence/req03-orquestacion/backfill_idempotente.md` y `.../reintento.md`.
 - Reversibilidad: las capas se regeneran reejecutando los CTAS (`CREATE OR REPLACE`); la
   auditoría se limpia con `DROP TABLE IF EXISTS oceanwatch.quality.ejecuciones_job`.
 

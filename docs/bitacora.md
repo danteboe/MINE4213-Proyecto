@@ -17,6 +17,75 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 
 ## Entradas
 
+### 2026-11-05 — Fase 4: Orquestación por Job de Databricks (Req. 3) — Equipo OceanWatch
+- **Objetivo de la sesión:** cerrar el Req. 3 con **evidencia real**: definir el pipeline
+  medallion como un Job de Databricks versionado (DAB), ejecutarlo de verdad (base,
+  idempotencia, backfill, reintento), demostrar corridas disparadas por el **scheduler**
+  (cron) y dejar el Job con el cron de **producción** como estado final, con monitoreo y
+  documentación (ADRs 013-015, runbook, DAG, matriz).
+- **Qué se hizo:**
+  - **Definición como código (FEAT-001):** Job `oceanwatch_pipeline_entrega2` como
+    **Databricks Asset Bundle** (`databricks.yml` + `resources/jobs/oceanwatch_pipeline.job.yml`):
+    4 tareas `notebook_task` serverless (ingesta → plata_calidad → conciliacion → oro),
+    `depends_on` lineal, parámetro `fecha_proceso` (default 2023-06-03) propagado a las 4
+    tareas, reintentos por tarea (ingesta 2 / plata 1 / oro 1 / conciliacion 0), cron
+    producción `0 0 6 * * ?` (America/Bogota, PAUSED), notificaciones email
+    (success/failure/duration) y health `RUN_DURATION_SECONDS>3600`. Tabla de auditoría
+    nueva `oceanwatch.quality.ejecuciones_job` (DDL `resources/sql/fase4_auditoria.sql`,
+    MERGE por `(job_run_id, task_key)`). Helpers puros en `src/oceanwatch/orquestacion/`.
+    Las tareas de capas ejecutan el **SQL CTAS fiable** vía `spark.sql`, NUNCA
+    `df.write.saveAsTable`. `databricks bundle validate` → `Validation OK!`; `pytest` 97 passed.
+  - **Ejecución real (FEAT-002):** `databricks bundle deploy` creó el Job (`job_id`
+    **202547459111516**). Corrida base `fecha_proceso=2023-06-03` (`run_id` 249039226964396)
+    → SUCCESS (4/4 tareas). Idempotencia: re-corrida 2023-06-03 (`run_id` 768406241318622)
+    con conteos ANTES==DESPUÉS. Backfill 2023-06-01 (`run_id` 406283395698923) estable.
+    Reintento real: job efímero `max_retries:1` (`run_id` 626548229252476) con attempt 0
+    FAILED → attempt 1 SUCCESS. Auditoría poblada (12 filas, 3 corridas × 4 tareas).
+  - **Scheduling real + cierre (FEAT-003):** se activó el cron de **demostración**
+    `0 */5 * * * ?` (America/Bogota, UNPAUSED) vía `databricks jobs update`; el **scheduler**
+    lanzó **3 corridas automáticas** (`trigger=PERIODIC`) a las 12:35/12:40/12:45 UTC
+    (run_ids **232561725749917**, **544541082194734**, **707241716873589**), las 3 SUCCESS
+    con las 4 tareas OK, distinguibles de las run-now manuales (`trigger=ONE_TIME`) de
+    FEAT-002. La auditoría sumó 12 filas (total 24). Luego se **restableció** el cron de
+    **producción** `0 0 6 * * ?` (America/Bogota, PAUSED) — estado FINAL verificado con
+    `jobs get`. Documentación: runbook completo (lanzar/reparar/backfill/leer auditoría/
+    limpiar checkpoints/diagnóstico por tarea), DAG mermaid
+    (`docs/architecture/fase4-dag-orquestacion.md` con nodos futuros ml/refresh_dashboard
+    punteados), ADR-015 (schedule + monitoreo), ADR-013/014 completados con run_ids reales,
+    matriz Req.3 y este registro.
+- **Decisiones/ADRs tocados:** **ADR-013** (diseño del Job: Lakeflow Jobs + notebook_task
+  serverless + SQL CTAS, DAB), **ADR-014** (idempotencia por tarea, reintentos y compuerta
+  Write-Audit-Publish), **ADR-015** (cron Quartz + timezone America/Bogota vs UTC, y
+  monitoreo: notificaciones + health + tabla de auditoría). Se citan ADR-004 (UTC
+  serverless), ADR-006/011 (invariante/cuarentena), ADR-012 (CTAS idempotente).
+- **Estado Verificado vs Diseñado:** **Verificado (ejecutado)** = despliegue del Job,
+  corridas base/idempotencia/backfill/reintento (FEAT-002), **3 corridas SCHEDULED reales**
+  por el scheduler y restauración del cron de producción (FEAT-003), auditoría poblada (24
+  filas) y tablas del pipeline intactas. No quedó nada PENDIENTE DE EJECUCIÓN en el Req. 3.
+- **Síntoma→causa→solución (callejones de la ejecución):**
+  - *`df.write.saveAsTable` en serverless:* síntoma = `INTERNAL_ERROR` en Spark Connect GC
+    sobre 25.9M filas (heredado de fase 3); causa = limitación del cómputo serverless para la
+    escritura Delta a esa escala; solución = las tareas de capas ejecutan el **SQL CTAS** vía
+    `spark.sql` leyendo `resources/sql/fase3_*.sql` (ADR-013).
+  - *Captura de corridas SCHEDULED:* síntoma = el cron de producción (06:00) no es
+    demostrable en la ventana de trabajo; causa = una corrida diaria tarda hasta 24 h en
+    dispararse; solución = cron temporal de alta frecuencia `0 */5 * * * ?` ~15 min para
+    capturar 3 corridas PERIODIC reales y luego restablecer producción (ADR-015).
+  - *Lectura de salidas de la CLI:* síntoma = `databricks jobs get-run --run-id` devolvía
+    archivo vacío y PowerShell escribe UTF-16; causa = en CLI v1.24.0 el `run_id` es
+    posicional (`get-run <id>`), y la salida redirigida queda en UTF-16; solución =
+    argumento posicional + parseo de JSON decodificando UTF-16/UTF-8-sig (documentado en el
+    runbook).
+- **Evidencia:** `evidence/req03-orquestacion/` — `definicion_job.md`, `jobs_get.md`,
+  `corridas_run_now.md`, `backfill_idempotente.md`, `reintento.md`, **`corridas_scheduled.md`**
+  (FEAT-003), `tabla_auditoria.md`. Código: `resources/jobs/`, `databricks.yml`,
+  `notebooks/fase4_tarea_*`, `resources/sql/fase4_auditoria.sql`, `src/oceanwatch/orquestacion/`.
+  Docs: `docs/runbook.md`, `docs/architecture/fase4-dag-orquestacion.md`, ADR-013/014/015.
+- **Pendientes / siguiente paso:** Fase siguiente (Req. 4) — dashboard de Databricks sobre
+  las tablas de oro. Los nodos `ml` (Fase 6) y `refresh_dashboard` (Fase 7) quedan
+  documentados como futuros en el DAG/YAML, no implementados. El cron de producción queda
+  PAUSED (activarlo es alternar `pause_status` cuando se opere en continuo).
+
 ### 2026-11-05 — Fase 3: Materialización de la bandera `en_agua` en la plata (cierre de brecha) — Equipo OceanWatch
 - **Objetivo de la sesión:** poblar la bandera de calidad `en_agua` de
   `oceanwatch.silver.ais_clean`, que había quedado en NULL tras FEAT-003.

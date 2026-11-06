@@ -97,18 +97,28 @@ el invariante antes de publicar la capa oro; detalle en ADR-014).
 - Negativas: un notebook por tarea (más archivos); el acoplamiento al warehouse CTAS
   implica que el `.sql` es la fuente única de verdad (los notebooks lo leen, no lo duplican).
 - Deuda asumida: los nodos `ml` (Fase 6) y `refresh_dashboard` (Fase 7) quedan documentados
-  como comentarios en el YAML pero NO implementados. Las corridas reales (run_ids) y la
-  demostración SCHEDULED son **PENDIENTE DE EJECUCIÓN** (FEAT-002/FEAT-003).
+  como comentarios en el YAML pero NO implementados.
+
+> **Actualización (ejecutado, FEAT-002/003).** El Job se desplegó con `databricks bundle
+> deploy` (`job_id` real **202547459111516**) y corrió de verdad: corrida base
+> `fecha_proceso=2023-06-03` (`run_id` 249039226964396) → SUCCESS con las 4 tareas OK
+> (ingesta 632126531199658, plata 702492582880484, conciliación 331661400464526, oro
+> 236147110169698). La demostración SCHEDULED se completó en FEAT-003 (corridas con
+> `trigger=PERIODIC` en `evidence/req03-orquestacion/corridas_scheduled.md`). Ya NO queda
+> nada PENDIENTE DE EJECUCIÓN en este ADR.
 
 ## 8. Cómo se verifica / reversibilidad
 
 - Verificación: `databricks bundle validate` -> `Validation OK!` (evidencia en
   `evidence/req03-orquestacion/definicion_job.md`); `SHOW TABLES IN oceanwatch.quality`
   incluye `ejecuciones_job`; `python -m pytest -q` verde (helpers puros de
-  `src/oceanwatch/orquestacion/`). El despliegue real y las corridas son **PENDIENTE DE
-  EJECUCIÓN** en FEAT-002 (procedimiento: exportar ENV desde `databricks.key`,
-  `databricks bundle deploy`, `databricks jobs run-now --job-id <id> --json
-  '{"job_parameters":{"fecha_proceso":"2023-06-03"}}'`, polling de `jobs get-run`).
+  `src/oceanwatch/orquestacion/`). **Ejecutado (FEAT-002/003):** `databricks bundle deploy`
+  creó el Job (`job_id` 202547459111516; `Resources: 1 created`); `databricks jobs get
+  --job-id 202547459111516 --output json` confirma las 4 tareas `notebook_task` serverless,
+  el `depends_on` lineal, los reintentos y el schedule; `databricks jobs run-now --job-id
+  202547459111516 --json '{"job_parameters":{"fecha_proceso":"2023-06-03"}}'` + polling de
+  `jobs get-run --run-id 249039226964396` → `result_state=SUCCESS`. Evidencia en
+  `evidence/req03-orquestacion/jobs_get.md` y `.../corridas_run_now.md`.
 - Reversibilidad: `databricks bundle destroy` elimina el Job desplegado; la tabla de
   auditoría se revierte con `DROP TABLE IF EXISTS oceanwatch.quality.ejecuciones_job`
   (no afecta a ninguna tabla del pipeline). El pipeline en sí es idempotente (ADR-014).

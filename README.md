@@ -28,13 +28,18 @@ lat/lon + WPI → Dashboard y ML de anomalías SOG) está diagramado en
 [`docs/architecture/medallion-overview.md`](docs/architecture/medallion-overview.md)
 (diagrama mermaid editable + explicación).
 
+La **orquestación** de ese flujo (el Job de Databricks que encadena ingesta → plata/calidad →
+conciliación → oro, con su cron y monitoreo) está diagramada en
+[`docs/architecture/fase4-dag-orquestacion.md`](docs/architecture/fase4-dag-orquestacion.md)
+(DAG mermaid + explicación) y operada según [`docs/runbook.md`](docs/runbook.md).
+
 ## Estado por requisito (rúbrica Entrega 2)
 
 | Req | Peso | Descripción | Estado |
 |---|---|---|---|
 | 1 | 15% | Ingesta streaming | **Verificado (ejecutado)** — Fase 2 |
 | 2 | 15% | Capas + calidad | **Verificado (ejecutado)** — Fase 3 |
-| 3 | 20% | Orquestación | Pendiente |
+| 3 | 20% | Orquestación | **Verificado (ejecutado)** — Fase 4 |
 | 4 | 15% | Dashboard | Pendiente |
 | 5 | 10% | Gobernanza | Diseñado (Fase 1); implementación pendiente |
 | 6 | 10% | ML con MLflow | Diseñado (Fase 1); implementación pendiente |
@@ -61,7 +66,7 @@ MINE4213-Proyecto/
 │   ├── traceability_matrix.md             # Matriz de trazabilidad (Req. 1–8)
 │   ├── data_contract_gold.md              # Contrato de datos oro (Fase 3)
 │   ├── data_quality_rules.md              # Catálogo de reglas de calidad (Fase 3)
-│   ├── runbook.md                         # PENDIENTE - Fase 4
+│   ├── runbook.md                         # Operación del Job (Fase 4)
 │   ├── guia_sustentacion.md               # PENDIENTE - Fase 9
 │   ├── adr/                               # ADR-TEMPLATE + ADR-001..012
 │   └── architecture/
