@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oceanwatch"
+version = "0.2.0"
+description = "OceanWatch Analytics — lakehouse Databricks para datos AIS de NOAA (Entrega 2)."
+requires-python = ">=3.12"
+# Única dependencia de ejecución fuera de Databricks. PySpark NO es dependencia:
+# se provee en el runtime serverless de Databricks y los imports son perezosos.
+dependencies = ["pyyaml"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

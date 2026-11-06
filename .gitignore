@@ -1,0 +1,19 @@
+# Secretos — NUNCA versionar
+*.key
+.databrickscfg
+conf/*.secret.yaml
+*.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# Artefactos locales
+*.log
+.DS_Store
+.spark-warehouse/
+/tmp/

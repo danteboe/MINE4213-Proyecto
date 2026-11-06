@@ -1,0 +1,81 @@
+# OceanWatch Analytics — configuración centralizada (SIN secretos)
+# La key de Databricks vive FUERA del repo (databricks.key) y NO se referencia aquí.
+# Ningún token, contraseña ni ruta personal debe añadirse a este archivo.
+proyecto:
+  nombre: "OceanWatch Analytics"
+  entrega: 2
+
+databricks:
+  host: "https://dbc-a568bc49-bdae.cloud.databricks.com/"   # solo referencia, sin token
+  region: "us-east-2"
+  metastore: "metastore_aws_us_east_2"
+  compute: "serverless"
+
+catalogo:
+  nombre: "oceanwatch"
+  esquemas:
+    bronze: "bronze"
+    silver: "silver"
+    gold: "gold"
+    quarantine: "quarantine"
+    quality: "quality"
+    ml: "ml"
+    entrega1: "entrega1"   # preservado, NO modificar
+
+volumenes:
+  landing: "landing"         # oceanwatch.bronze.landing (zips/csv descomprimidos)
+  checkpoints: "checkpoints" # oceanwatch.bronze.checkpoints (Structured Streaming)
+
+rutas:
+  zip_subdir: "zips"
+  csv_subdir: "csv"
+  wpi_shapefile: "world_port_index/WPI.shp"   # relativo a la raíz del workspace local
+
+fuente_noaa:
+  base_url: "https://coast.noaa.gov/htdata/CMSP/AISDataHandler/2023"
+  patron_archivo: "AIS_{fecha}.zip"            # fecha = YYYY_MM_DD
+  acceso: "2026-11-05"
+
+corpus:
+  fecha_inicio_default: "2023-06-01"
+  # Corpus de 3 días para la ingesta verificada de Fase 2 (2023-06-01/02/03).
+  # El diseño admite rangos mayores: basta ampliar esta fecha (o pasar fechas
+  # explícitas a la orquestación) para ingerir más días del feed AIS.
+  fecha_fin_default: "2023-06-03"
+  resiliencia: "diseñado para admitir archivos y fechas nuevas del feed AIS"
+
+ingesta:
+  tabla_bronze: "ais_raw"                 # oceanwatch.bronze.ais_raw (append-only, ADR-006)
+  tabla_metricas:
+    esquema: "quality"                    # oceanwatch.quality.ingesta_metricas
+    objeto: "ingesta_metricas"
+  watermark_dedup: "24 hours"             # ventana de watermark para dedup bronze->silver (ADR-006)
+  clave_dedup: ["MMSI", "BaseDateTime"]   # clave natural de deduplicación
+  subruta_csv: "csv"                      # landing/csv/date=YYYY-MM-DD/
+  subruta_zips: "zips"                    # landing/zips/
+  checkpoint: "bronze/ais_raw"            # bajo el volumen checkpoints
+  rescued_column: "_rescued_data"         # columna de datos rescatados (evolución de esquema)
+  txn_app_id: "oceanwatch_bronze_ais_raw" # idempotencia exactly-once en foreachBatch (ADR-004)
+
+esquema_ais:   # 17 campos, esquema explícito (continuidad Entrega 1)
+  - { nombre: "MMSI", tipo: "long" }
+  - { nombre: "BaseDateTime", tipo: "timestamp" }
+  - { nombre: "LAT", tipo: "double" }
+  - { nombre: "LON", tipo: "double" }
+  - { nombre: "SOG", tipo: "double" }
+  - { nombre: "COG", tipo: "double" }
+  - { nombre: "Heading", tipo: "double" }
+  - { nombre: "VesselName", tipo: "string" }
+  - { nombre: "IMO", tipo: "string" }
+  - { nombre: "CallSign", tipo: "string" }
+  - { nombre: "VesselType", tipo: "int" }
+  - { nombre: "Status", tipo: "int" }   # código AIS entero (muestra real: verificacion_esquema_real.md)
+  - { nombre: "Length", tipo: "double" }
+  - { nombre: "Width", tipo: "double" }
+  - { nombre: "Draft", tipo: "double" }
+  - { nombre: "Cargo", tipo: "int" }
+  - { nombre: "TransceiverClass", tipo: "string" }
+
+gold:
+  grilla_espacial: "redondeo_latlon"   # decisión Fase 1: NO H3 (ver ADR-001)
+  decimales_grilla: 2
