@@ -80,6 +80,37 @@ gold:
   grilla_espacial: "redondeo_latlon"   # decisión Fase 1: NO H3 (ver ADR-001)
   decimales_grilla: 2
 
+# Capa PLATA (Req. 2, FEAT-003): nombres de las tablas resultado y parámetros de
+# materialización. SIN secretos. Reutiliza ingesta.watermark_dedup y clave_dedup
+# para la deduplicación bronce->plata (ADR-006); NO se redefinen aquí.
+silver:
+  tabla_clean: "ais_clean"             # oceanwatch.silver.ais_clean (pasa TODAS las compuertas de descarte)
+  # Columnas de banderas que marcan los atributos nulificados (acción nulificar_atributo).
+  banderas:
+    sog: "sog_no_disponible"           # SOG>=102.3 (centinela) -> SOG=null + bandera
+    heading: "heading_desconocido"     # Heading=511 (centinela) -> Heading=null + bandera
+    cog: "cog_desconocido"             # COG=360 (centinela) -> COG=null + bandera
+    length: "length_no_fisica"         # Length<=0 -> Length=null + bandera
+    width: "width_no_fisica"           # Width<=0 -> Width=null + bandera
+    draft: "draft_no_fisica"           # Draft<=0 -> Draft=null + bandera
+    imo: "imo_invalido"                # IMO con patrón inválido -> IMO=null + bandera (vacío es VÁLIDO)
+    en_agua: "en_agua"                 # bandera tierra/agua (ADR-010, nulificar_atributo, NO descarta)
+
+quarantine:
+  tabla_rejected: "ais_rejected"       # oceanwatch.quarantine.ais_rejected (registro original + causas + fechas)
+  # Patrón Dead-letter/Quarantine (ADR-011): registro original COMPLETO + causas
+  # (array<string> con los NOMBRES de las reglas de descarte violadas) + _batch_date
+  # + _fecha_cuarentena. Una fila con varias causas cuenta UNA sola vez.
+  columna_causas: "causas"
+  columna_fecha_cuarentena: "_fecha_cuarentena"
+
+quality_plata:
+  tabla_metricas_calidad: "metricas_calidad"   # oceanwatch.quality.metricas_calidad (por lote/día y por regla)
+  # Umbral de alerta de % de rechazo por regla: si una regla de descarte rechaza
+  # una fracción >= a este umbral (sobre los evaluados del lote/día), la columna
+  # 'alerta' de metricas_calidad se marca True. 0.05 = 5%. Parametrizable.
+  umbral_alerta_pct_rechazo: 0.05
+
 # Catálogo de reglas de calidad de la capa plata (Req. 2, ADR-009).
 # Cada regla lleva: umbral(es) parametrizados, un nombre estable, su versión ('v1')
 # y la acción cuando se viola ('descartar_fila' => a cuarentena; 'nulificar_atributo'
