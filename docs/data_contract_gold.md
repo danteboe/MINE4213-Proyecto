@@ -18,6 +18,7 @@ Estado: **Verificado (ejecutado)** en Databricks serverless el 2026-11-06
 | `gold.trayectorias_diarias` | 1 fila por buque y día | `(MMSI, dia)` | 61.768 | `silver.ais_clean` |
 | `gold.presencia_puertos` | 1 fila por buque, puerto y día | `(MMSI, INDEX_NO, dia)` | 9.153 | `silver.ais_clean` ⋈ `gold.world_port_index` |
 | `gold.matriz_trafico` | 1 fila por celda y hora | `(celda_lat, celda_lon, hora)` | 2.319.365 | `silver.ais_clean` |
+| `gold.matriz_trafico_diaria` | 1 fila por celda y día | `(celda_lat, celda_lon, dia)` | 1.027.635 | `gold.matriz_trafico` (agregado) |
 | `gold.anomalias_velocidad` | 1 fila por posición AIS anómala | `(MMSI, BaseDateTime)` | 67.828 (`_batch_date=2023-06-03`) | `silver.ais_clean` + modelo UC `oceanwatch.ml.detector_anomalias_velocidad` `@champion` |
 
 ## `gold.world_port_index` (dimensión de referencia)
@@ -98,6 +99,30 @@ Densidad de tráfico por celda espacial (redondeo lat/lon a 2 decimales, ADR-001
 
 - **Granularidad:** 1 fila por `(celda_lat, celda_lon, hora)`. **Clave:** las tres.
 - **Garantías:** LAT/LON en rango (heredado de plata); celda ~1.1 km de lado en latitud.
+
+## `gold.matriz_trafico_diaria` (hecho — vista de apoyo del dashboard)
+
+Densidad de tráfico por celda espacial (redondeo lat/lon a 2 decimales, ADR-001) y **día**,
+**agregando** la matriz horaria `gold.matriz_trafico` (colapsa la dimensión hora). Creada en
+la Fase 7 (Req. 4, ADR-017) para que el visual 1 del dashboard (mapa de intensidad) lea una
+tabla **oro pre-agregada por día** y no recompute el `GROUP BY` horario en cada render
+(decisión D2/D4). Tabla Delta, idempotente (`CREATE OR REPLACE TABLE ... AS SELECT`).
+
+| Columna | Tipo | Descripción |
+|---|---|---|
+| `celda_lat` | DOUBLE | `round(LAT, 2)` (**clave**). |
+| `celda_lon` | DOUBLE | `round(LON, 2)` (**clave**). |
+| `dia` | DATE | `date(hora)`, UTC (**clave**); parámetro `:fecha` del dashboard. |
+| `intensidad` | BIGINT | `SUM(n_posiciones)`: posiciones AIS en la celda ese día (**métrica principal** del mapa). |
+| `buques` | BIGINT | `SUM(n_buques)`: métrica **secundaria** de actividad. **Límite:** suma los conteos de buques distintos **por hora**, así que un buque presente en varias horas de la celda se cuenta más de una vez (NO es "buques únicos por día"). |
+
+- **Granularidad:** 1 fila por `(celda_lat, celda_lon, dia)`. **Clave:** las tres.
+- **Linaje:** `oceanwatch.gold.matriz_trafico` (que viene de `silver.ais_clean`). El
+  dashboard NO toca silver/bronze: lee esta tabla ya agregada.
+- **Conteo real:** **1.027.635** filas (2023-06-01 → 332.177 celdas; 06-02 → 370.872;
+  06-03 → 324.586). Verificado el 2026-11-06, warehouse `377600528fed7c47`.
+- **DDL:** `resources/sql/fase7_matriz_trafico_diaria.sql`.
+- **Evidencia:** `evidence/req04-dashboard/vista_apoyo_matriz_diaria.md`.
 
 ## `gold.anomalias_velocidad` (hecho — salida del modelo de ML)
 

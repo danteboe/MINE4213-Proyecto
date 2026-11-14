@@ -1,0 +1,405 @@
+{
+  "datasets": [
+    {
+      "name": "ds_matriz_diaria",
+      "displayName": "V1 - Matriz de trafico diaria (oro)",
+      "queryLines": [
+        "SELECT celda_lat, celda_lon, intensidad, buques\n",
+        "FROM oceanwatch.gold.matriz_trafico_diaria\n",
+        "WHERE dia = :fecha\n",
+        "ORDER BY intensidad DESC\n",
+        "LIMIT 2000"
+      ],
+      "parameters": [
+        {
+          "displayName": "fecha",
+          "keyword": "fecha",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                { "value": "2023-06-03" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ds_ranking_puertos",
+      "displayName": "V2 - Ranking de puertos (oro)",
+      "queryLines": [
+        "SELECT PORT_NAME, COUNTRY,\n",
+        "       COUNT(DISTINCT MMSI)        AS buques_distintos,\n",
+        "       SUM(n_posiciones_en_puerto) AS visitas\n",
+        "FROM oceanwatch.gold.presencia_puertos\n",
+        "WHERE dia = :fecha\n",
+        "GROUP BY PORT_NAME, COUNTRY\n",
+        "ORDER BY buques_distintos DESC\n",
+        "LIMIT 15"
+      ],
+      "parameters": [
+        {
+          "displayName": "fecha",
+          "keyword": "fecha",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                { "value": "2023-06-03" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ds_buques_puerto",
+      "displayName": "V3 - Buques en puerto (oro)",
+      "queryLines": [
+        "SELECT MMSI, PORT_NAME, COUNTRY,\n",
+        "       n_posiciones_en_puerto,\n",
+        "       primera_posicion, ultima_posicion\n",
+        "FROM oceanwatch.gold.presencia_puertos\n",
+        "WHERE dia = :fecha\n",
+        "ORDER BY n_posiciones_en_puerto DESC\n",
+        "LIMIT 500"
+      ],
+      "parameters": [
+        {
+          "displayName": "fecha",
+          "keyword": "fecha",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                { "value": "2023-06-03" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ds_anomalias",
+      "displayName": "V4 - Anomalias del dia (oro)",
+      "queryLines": [
+        "SELECT MMSI, BaseDateTime, LAT, LON, SOG, VesselType,\n",
+        "       z_sog, score_anomalia, razon\n",
+        "FROM oceanwatch.gold.anomalias_velocidad\n",
+        "WHERE _batch_date = :fecha AND es_anomalia = true\n",
+        "ORDER BY score_anomalia ASC\n",
+        "LIMIT 500"
+      ],
+      "parameters": [
+        {
+          "displayName": "fecha",
+          "keyword": "fecha",
+          "dataType": "DATE",
+          "defaultSelection": {
+            "values": {
+              "dataType": "DATE",
+              "values": [
+                { "value": "2023-06-03" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "pagina_principal",
+      "displayName": "Consola de trafico (oro)",
+      "layout": [
+        {
+          "widget": {
+            "name": "titulo",
+            "textbox_spec": "# OceanWatch - Consola de trafico maritimo (capa oro)\nTablero AI/BI alimentado EXCLUSIVAMENTE de `oceanwatch.gold`. Use el filtro de **fecha** para cambiar el dia analizado (corpus: 2023-06-01/02/03; las anomalias solo existen el 2023-06-03)."
+          },
+          "position": { "x": 0, "y": 0, "width": 6, "height": 2 }
+        },
+        {
+          "widget": {
+            "name": "filtro_fecha",
+            "queries": [
+              {
+                "name": "parameter_dashboards/ds_matriz_diaria/fecha",
+                "query": {
+                  "datasetName": "ds_matriz_diaria",
+                  "parameters": [ { "name": "fecha", "keyword": "fecha" } ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/ds_ranking_puertos/fecha",
+                "query": {
+                  "datasetName": "ds_ranking_puertos",
+                  "parameters": [ { "name": "fecha", "keyword": "fecha" } ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/ds_buques_puerto/fecha",
+                "query": {
+                  "datasetName": "ds_buques_puerto",
+                  "parameters": [ { "name": "fecha", "keyword": "fecha" } ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "parameter_dashboards/ds_anomalias/fecha",
+                "query": {
+                  "datasetName": "ds_anomalias",
+                  "parameters": [ { "name": "fecha", "keyword": "fecha" } ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  { "parameterName": "fecha", "queryName": "parameter_dashboards/ds_matriz_diaria/fecha" },
+                  { "parameterName": "fecha", "queryName": "parameter_dashboards/ds_ranking_puertos/fecha" },
+                  { "parameterName": "fecha", "queryName": "parameter_dashboards/ds_buques_puerto/fecha" },
+                  { "parameterName": "fecha", "queryName": "parameter_dashboards/ds_anomalias/fecha" }
+                ]
+              },
+              "frame": { "title": "Fecha analizada", "showTitle": true }
+            }
+          },
+          "position": { "x": 0, "y": 2, "width": 2, "height": 1 }
+        },
+        {
+          "widget": {
+            "name": "v1_mapa_intensidad",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_matriz_diaria",
+                  "fields": [
+                    { "name": "celda_lat", "expression": "`celda_lat`" },
+                    { "name": "celda_lon", "expression": "`celda_lon`" },
+                    { "name": "intensidad", "expression": "`intensidad`" },
+                    { "name": "buques", "expression": "`buques`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "symbol-map",
+              "encodings": {
+                "coordinates": {
+                  "latitude": { "fieldName": "celda_lat", "displayName": "celda_lat" },
+                  "longitude": { "fieldName": "celda_lon", "displayName": "celda_lon" }
+                },
+                "color": {
+                  "fieldName": "intensidad",
+                  "scale": { "type": "quantitative" },
+                  "displayName": "intensidad"
+                },
+                "extra": [
+                  { "fieldName": "buques", "displayName": "buques" }
+                ]
+              },
+              "frame": {
+                "title": "V1 - Mapa de intensidad de trafico por celda (gold.matriz_trafico_diaria)",
+                "showTitle": true
+              }
+            }
+          },
+          "position": { "x": 0, "y": 3, "width": 6, "height": 6 }
+        },
+        {
+          "widget": {
+            "name": "v2_ranking_puertos",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_ranking_puertos",
+                  "fields": [
+                    { "name": "PORT_NAME", "expression": "`PORT_NAME`" },
+                    { "name": "COUNTRY", "expression": "`COUNTRY`" },
+                    { "name": "buques_distintos", "expression": "`buques_distintos`" },
+                    { "name": "visitas", "expression": "`visitas`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "buques_distintos",
+                  "scale": { "type": "quantitative" },
+                  "displayName": "Buques distintos"
+                },
+                "y": {
+                  "fieldName": "PORT_NAME",
+                  "scale": { "type": "categorical" },
+                  "displayName": "Puerto"
+                },
+                "color": {
+                  "fieldName": "COUNTRY",
+                  "scale": { "type": "categorical" },
+                  "displayName": "Pais"
+                },
+                "extra": [
+                  { "fieldName": "visitas", "displayName": "visitas" }
+                ]
+              },
+              "frame": {
+                "title": "V2 - Ranking de puertos por buques distintos (gold.presencia_puertos)",
+                "showTitle": true
+              }
+            }
+          },
+          "position": { "x": 0, "y": 9, "width": 3, "height": 6 }
+        },
+        {
+          "widget": {
+            "name": "v3_buques_puerto",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_buques_puerto",
+                  "fields": [
+                    { "name": "MMSI", "expression": "`MMSI`" },
+                    { "name": "PORT_NAME", "expression": "`PORT_NAME`" },
+                    { "name": "COUNTRY", "expression": "`COUNTRY`" },
+                    { "name": "n_posiciones_en_puerto", "expression": "`n_posiciones_en_puerto`" },
+                    { "name": "primera_posicion", "expression": "`primera_posicion`" },
+                    { "name": "ultima_posicion", "expression": "`ultima_posicion`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  { "fieldName": "MMSI", "displayName": "MMSI", "booleanValues": ["false", "true"], "type": "integer" },
+                  { "fieldName": "PORT_NAME", "displayName": "Puerto", "type": "string" },
+                  { "fieldName": "COUNTRY", "displayName": "Pais", "type": "string" },
+                  { "fieldName": "n_posiciones_en_puerto", "displayName": "Posiciones en puerto", "type": "integer" },
+                  { "fieldName": "primera_posicion", "displayName": "Primera posicion", "type": "datetime" },
+                  { "fieldName": "ultima_posicion", "displayName": "Ultima posicion", "type": "datetime" }
+                ]
+              },
+              "frame": {
+                "title": "V3 - Buques en puerto en la fecha (gold.presencia_puertos)",
+                "showTitle": true
+              }
+            }
+          },
+          "position": { "x": 3, "y": 9, "width": 3, "height": 6 }
+        },
+        {
+          "widget": {
+            "name": "v4_anomalias_tabla",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_anomalias",
+                  "fields": [
+                    { "name": "MMSI", "expression": "`MMSI`" },
+                    { "name": "BaseDateTime", "expression": "`BaseDateTime`" },
+                    { "name": "LAT", "expression": "`LAT`" },
+                    { "name": "LON", "expression": "`LON`" },
+                    { "name": "SOG", "expression": "`SOG`" },
+                    { "name": "VesselType", "expression": "`VesselType`" },
+                    { "name": "z_sog", "expression": "`z_sog`" },
+                    { "name": "score_anomalia", "expression": "`score_anomalia`" },
+                    { "name": "razon", "expression": "`razon`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 1,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  { "fieldName": "MMSI", "displayName": "MMSI", "type": "integer" },
+                  { "fieldName": "BaseDateTime", "displayName": "Instante", "type": "datetime" },
+                  { "fieldName": "LAT", "displayName": "LAT", "type": "float" },
+                  { "fieldName": "LON", "displayName": "LON", "type": "float" },
+                  { "fieldName": "SOG", "displayName": "SOG (kn)", "type": "float" },
+                  { "fieldName": "VesselType", "displayName": "Tipo buque", "type": "integer" },
+                  { "fieldName": "z_sog", "displayName": "z_sog", "type": "float" },
+                  { "fieldName": "score_anomalia", "displayName": "Score", "type": "float" },
+                  { "fieldName": "razon", "displayName": "Razon", "type": "string" }
+                ]
+              },
+              "frame": {
+                "title": "V4 - Anomalias del dia (gold.anomalias_velocidad, es_anomalia=true)",
+                "showTitle": true
+              }
+            }
+          },
+          "position": { "x": 0, "y": 15, "width": 3, "height": 6 }
+        },
+        {
+          "widget": {
+            "name": "v4_anomalias_mapa",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_anomalias",
+                  "fields": [
+                    { "name": "LAT", "expression": "`LAT`" },
+                    { "name": "LON", "expression": "`LON`" },
+                    { "name": "z_sog", "expression": "`z_sog`" },
+                    { "name": "MMSI", "expression": "`MMSI`" }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "symbol-map",
+              "encodings": {
+                "coordinates": {
+                  "latitude": { "fieldName": "LAT", "displayName": "LAT" },
+                  "longitude": { "fieldName": "LON", "displayName": "LON" }
+                },
+                "color": {
+                  "fieldName": "z_sog",
+                  "scale": { "type": "quantitative" },
+                  "displayName": "z_sog"
+                },
+                "extra": [
+                  { "fieldName": "MMSI", "displayName": "MMSI" }
+                ]
+              },
+              "frame": {
+                "title": "V4 - Mapa de posiciones anomalas (color = z_sog)",
+                "showTitle": true
+              }
+            }
+          },
+          "position": { "x": 3, "y": 15, "width": 3, "height": 6 }
+        }
+      ]
+    }
+  ]
+}

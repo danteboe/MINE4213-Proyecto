@@ -18,3 +18,6 @@ venv/
 .spark-warehouse/
 /tmp/
 .agents
+.databricks
+.databricks/
+.pytest_cache/

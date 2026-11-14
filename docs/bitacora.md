@@ -17,6 +17,53 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 
 ## Entradas
 
+### 2026-11-05 — Cierre consolidado (Req. 7 + documentación transversal) — Equipo OceanWatch
+- **Objetivo de la sesión:** consolidar la documentación de cierre de la Entrega 2 (sin nueva
+  implementación): dejar el repo como punto de entrada reproducible, cerrar el Req. 7 y producir
+  los artefactos de autoevaluación, pendientes del equipo y guía de sustentación, coherentes con
+  el estado real verificado del workspace.
+- **Qué se hizo:**
+  - **README consolidado:** tabla de estado de los 8 requisitos actualizada (Req. 1–7 Verificado;
+    Req. 8 sustentación presencial sin entregable de software), **inventario real de recursos**
+    en Databricks (catálogo/esquemas/volúmenes; tabla de conteos; Job `202547459111516` con cron
+    PAUSED; modelo `@champion`; dashboard publicado con URL; 4 grupos de rol), "Cómo reproducir
+    desde cero" (bootstrap → bundle → run por fecha → `en_agua` → permisos → dashboard), fuentes
+    con fecha de acceso 2026-11-05 y licencias (NOAA/WPI dominio público), gobernanza de secretos
+    y nota de Delta Sharing/pronóstico fuera de alcance. Sección de Entrega 1 preservada. Sin
+    estados desactualizados ("Pendiente/Diseñado/Fase 9" eliminados).
+  - **Matriz de trazabilidad:** Req. 7 → **Verificado (ejecutado)** (repo estructurado + bitácora
+    + 18 ADRs + matriz + evidencia); Req. 8 → **sustentación presencial, sin entregable de
+    software**. Nota al pie reescrita (único pendiente = capturas de UI; Delta Sharing/pronóstico
+    fuera de alcance).
+  - **Nuevos artefactos:** `docs/autoevaluacion_rubrica.md` (cumplimiento requisito por requisito
+    + checklist de 11 ítems del enunciado, con rutas reales de `evidence/` y brechas honestas);
+    `docs/pendientes_equipo.md` (2 acciones manuales: capturas de dashboard y de linaje, con
+    procedimiento exacto); `docs/guia_sustentacion.md` (arquitectura en 1 página, guion de demo
+    con plan B, banco de preguntas por ADR, 10 decisiones defendibles / 5 débiles con mitigación).
+  - **Higiene:** `.gitignore` ampliado con `.databricks`/`.databricks/` y `.pytest_cache/`.
+    Verificado: CERO `*.key` y CERO temporales `_*` dentro del repo; `__pycache__`/`.agents`/
+    `.databricks` ignorados; único `host` en `conf/config.yaml` es la URL del workspace sin token;
+    `entrega1_oceanwatch.ipynb` intacto.
+- **Decisiones/ADRs tocados:** ninguno nuevo; se referencian los 18 ADRs existentes (ADR-001..018,
+  todos Aceptados) como cuerpo de decisiones del Req. 7.
+- **Estado Verificado vs Diseñado:** **Verificado (ejecutado).** Las 6 fases técnicas estaban ya
+  completas y verificadas; este cierre es documental. `python -m pytest -q` = **109 passed, 1
+  skipped**.
+- **Recursos vivos en Databricks (resumen):** catálogo `oceanwatch` (bronze/silver/gold/
+  quarantine/quality/ml); `bronze.ais_raw`=25.897.493, `silver.ais_clean`=25.857.101,
+  `quarantine.ais_rejected`=39.734, `gold.anomalias_velocidad`=67.828 (invariante diferencia 0);
+  Job `oceanwatch_pipeline_entrega2` (5 tareas, cron PAUSED, 3 corridas SCHEDULED SUCCESS); modelo
+  `oceanwatch.ml.detector_anomalias_velocidad` v1 `@champion`; dashboard
+  `01f1da0367841f3db6c6ddcb8edaa849` publicado; 4 grupos de rol con grants de mínimo privilegio.
+- **Evidencia:** `README.md`, `docs/traceability_matrix.md`, `docs/autoevaluacion_rubrica.md`,
+  `docs/pendientes_equipo.md`, `docs/guia_sustentacion.md`, `.gitignore`, y las carpetas
+  `evidence/req01..req06` ya existentes.
+- **Pendientes / siguiente paso:** solo acciones manuales del equipo (no software): **capturas de
+  UI** del dashboard (4 visuales + parámetro de fecha) y del grafo de linaje en Catalog Explorer
+  (procedimiento en `docs/pendientes_equipo.md`). Sustentación presencial en la última clase.
+  *Nota de fechas:* algunos timestamps de linaje figuran como 2026-11-06 por UTC; el trabajo es de
+  la sesión del 2026-11-05.
+
 ### 2026-11-05 — Fase 5: Gobernanza (Req. 5) — Equipo OceanWatch
 - **Objetivo de la sesión:** cerrar el Req. 5 con **evidencia real**: gobernanza efectiva del
   lakehouse sobre Unity Catalog — permisos de **mínimo privilegio** por rol, **linaje**
@@ -73,6 +120,51 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 - **Pendientes / siguiente paso:** que el equipo capture el **screenshot** de linaje en Catalog
   Explorer (procedimiento en `linaje.md`). Deuda reconocida en ADR-018 §7: *tags* de
   clasificación y política de evolución de esquema del oro (fuera del alcance de la Fase 5).
+
+### 2026-11-05 — Fase 7: Consola de visualización (Req. 4) — Equipo OceanWatch
+- **Objetivo de la sesión:** cerrar el Req. 4 con **evidencia real**: una consola de
+  visualización en **Databricks AI/BI Dashboards** (recurso Lakeview, NO Power BI) que
+  consuma **exclusivamente** la capa oro, con los 4 visuales obligatorios, un parámetro de
+  fecha, definición como código en el repo y **despliegue real** (publicado) en el workspace.
+- **Qué se hizo:**
+  - **Vista de apoyo en oro (D2/D4):** `resources/sql/fase7_matriz_trafico_diaria.sql` crea
+    `gold.matriz_trafico_diaria` (`CREATE OR REPLACE TABLE ... AS SELECT`, agrega la matriz
+    horaria `gold.matriz_trafico` a 1 fila por celda-día). Ejecutada en serverless
+    (`377600528fed7c47`): **1.027.635** filas (06-01: 332.177; 06-02: 370.872; 06-03:
+    324.586). El mapa lee esta tabla pre-agregada en vez de recomputar sobre 2,3 M filas.
+  - **Definición como código:** `resources/dashboards/oceanwatch_oro.lvdash.json` — 4 datasets
+    (los 4 visuales), 1 página con título, filtro de **fecha** (`filter-single-select`) y 7
+    widgets: V1 mapa de intensidad (`symbol-map` sobre `gold.matriz_trafico_diaria`), V2
+    barras ranking de puertos (`gold.presencia_puertos`), V3 tabla buques en puerto
+    (`gold.presencia_puertos`), V4 tabla + mapa de anomalías (`gold.anomalias_velocidad`,
+    `es_anomalia=true`). Parámetro único `:fecha` tipo DATE (default 2023-06-03) en los 4
+    datasets. 0 referencias a bronze/silver.
+  - **Despliegue REAL (D1, vía REST):** `POST /api/2.0/lakeview/dashboards` +
+    `POST .../published` sobre el warehouse serverless. Dashboard
+    **`01f1da0367841f3db6c6ddcb8edaa849`**, `lifecycle_state=ACTIVE`, publicado
+    (`embed_credentials=true`). URL publicada
+    `https://dbc-a568bc49-bdae.cloud.databricks.com/dashboardsv3/01f1da0367841f3db6c6ddcb8edaa849/published`.
+    Dashboard único de este proyecto (no se dejaron de prueba).
+  - **Verificación de datos:** las 4 consultas corridas vía `_dbx_sql.py` retornan filas
+    reales (V1 top 39.470; V2 NEW YORK CITY 92; V3 MMSI con 1.347 posiciones; V4 67.828
+    anomalías el 06-03). Parámetro `:fecha` validado con las 3 fechas (V4 vacío en 06-01/02 y
+    67.828 en 06-03, correcto por el corpus).
+  - **Documentación + trazabilidad:** ADR-017 (9 secciones, Aceptado), contrato de oro con
+    `gold.matriz_trafico_diaria`, evidencia en `evidence/req04-dashboard/`
+    (`consultas_visuales`, `vista_apoyo_matriz_diaria`, `despliegue_dashboard`,
+    `validacion_parametro_fecha`, `confirmacion_solo_oro`, `capturas_PENDIENTE`), esta entrada
+    y la fila Req. 4 de la matriz a **Verificado (ejecutado)**.
+- **Decisiones/ADRs tocados:** **ADR-017** (AI/BI Dashboards + REST + vista de apoyo en oro +
+  parámetro `fecha` + consumo solo-oro + decisión de refresco). Cita **ADR-016** (definición
+  de "anomalía del día"), **ADR-001** (grilla 2 decimales) y **ADR-012** (modelo dimensional).
+- **Estado Verificado vs Diseñado:** **Verificado (ejecutado)** = tabla de apoyo poblada, las
+  4 consultas con filas reales, dashboard creado y publicado (ID/URL reales), parámetro de
+  fecha validado. **Pendiente del equipo:** solo las **capturas de pantalla** de la interfaz
+  (`capturas_PENDIENTE.md`), no automatizables sin navegador autenticado.
+- **Evidencia:** `evidence/req04-dashboard/`.
+- **Pendientes / siguiente paso:** que el equipo tome las capturas listadas en
+  `capturas_PENDIENTE.md`. Refresco acoplado al Job: **descartado** (el dashboard lee oro en
+  vivo; ver ADR-017 §7).
 
 ### 2026-11-05 — Fase 6: ML con MLflow (Req. 6) — Equipo OceanWatch
 - **Objetivo de la sesión:** cerrar el Req. 6 con **evidencia real**: implementar el caso de ML
