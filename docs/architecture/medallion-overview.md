@@ -38,7 +38,7 @@ La fuente de hechos es el mensaje por `(MMSI, BaseDateTime)` en UTC. El día del
 | Geocalidad | Agregación de celdas distintas y broadcast de tres columnas | Una evaluación vectorizada sobre celdas, límite de 750.000 por día y fallo explícito si se excede. La máscara ráster vive una vez en el driver. |
 | Plata | Una agregación por clave válida para conservar un representante y la multiplicidad | `max(struct(...))` determinista con preferencia de SOG real y fila sin rescate. Las reglas se miden con agregados condicionales de una sola pasada. Se reutiliza la clasificación en disco de Spark mientras se publican plata, cuarentena y métricas. |
 | Trayectorias | Exchange por buque y día, orden temporal local y agregación por la misma llave | Ventanas nativas con `lag`, evitando coleccionar la trayectoria de cada buque al driver. |
-| Presencia | Broadcast del WPI y agregación de coincidencias | Join por celda con 3.669 puertos, sin cruzar cada ping con todo el catálogo. |
+| Presencia | Broadcast del WPI y agregación por MMSI, código de puerto y día | Se cruza por celda y se agregan claves pequeñas. Un segundo broadcast incorpora nombre, país y atributos al resultado, después del filtro de permanencia. |
 | Matriz de tráfico | Redistribución por grilla/hora y conteo exacto de MMSI | Se mantiene el conteo exacto para el grano de negocio. El agregado diario lee el resultado horario ya compacto. |
 | ML | Ventana por buque/día, broadcast por tipo y lotes Arrow | La muestra entrenada tiene límite estricto. La inferencia conserva las filas y produce una sola puntuación por mensaje en el ejecutor. |
 

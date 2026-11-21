@@ -1,0 +1,21 @@
+resources:
+  experiments:
+    oceanwatch_anomalias:
+      name: /Users/${workspace.current_user.userName}/oceanwatch_anomalias_cluster
+      artifact_location: dbfs:/Volumes/clase10/equipo9/checkpoints/oceanwatch_equipo9/mlflow
+      permissions:
+        - group_name: mine-group9
+          level: CAN_READ
+      tags:
+        - key: mlflow.note.content
+          value: Detección de anomalías de velocidad AIS con validación temporal y registro UC.
+  registered_models:
+    oceanwatch_anomalias_sog:
+      name: oceanwatch_ml_detector_anomalias_velocidad
+      catalog_name: clase14
+      schema_name: equipo9
+      comment: Detector de anomalías SOG. Cada versión conserva su corrida MLflow.
+      grants:
+        - principal: mine-group9
+          privileges:
+            - EXECUTE

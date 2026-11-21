@@ -3,7 +3,7 @@
 ## Despliegue
 
 1. Autenticar la CLI con OAuth en el [workspace institucional](https://dbc-b38f0852-ecf9.cloud.databricks.com). El perfil debe resolver a la identidad autorizada para el clúster dedicado. Para desplegar con otro clúster de Unity Catalog, pasar `--var cluster_id=<id>` al bundle. Usar DBR 18 o posterior y comprobar compatibilidad de las bibliotecas instaladas por las tareas.
-2. Ejecutar `databricks bundle validate --strict` y `databricks bundle deploy` desde la raíz. El bundle sincroniza `src`, configuración, notebooks operativos y WPI. Incluye dos Jobs y el tablero. El destino por defecto es `institucional`.
+2. Ejecutar `databricks bundle validate --strict` y `databricks bundle deploy` desde la raíz. El bundle sincroniza el código, la configuración, los notebooks y las referencias geográficas. Aprovisiona dos Jobs, el tablero, el experimento y el registro UC. El destino por defecto es `institucional`. Si cambia de usuario, ajuste la ruta del experimento en `conf/config.yaml`.
 3. Lanzar la primera corrida con entrenamiento y los días de referencia.
 
 ```sh

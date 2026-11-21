@@ -17,7 +17,7 @@ El DAG ejecuta **preparación → ingesta → plata → conciliación → oro �
 | Tablas y modelo institucionales | `clase14.equipo9.oceanwatch_<capa>_<objeto>` |
 | Landing y checkpoint | `/Volumes/clase10/equipo9/checkpoints/oceanwatch_equipo9` |
 | Configuración | [conf/config.yaml](conf/config.yaml), sección `institucional` |
-| Despliegue | [databricks.yml](databricks.yml), [Jobs](resources/jobs/) y [tablero](resources/dashboards/) |
+| Despliegue | [databricks.yml](databricks.yml), [Jobs](resources/jobs/), [tablero](resources/dashboards/) y [recursos ML](resources/ml/) |
 | Entrypoints | [Pipeline](notebooks/oceanwatch_cluster.py) y [verificación](notebooks/oceanwatch_verificacion.py) |
 | Decisiones | [ADR-019](docs/adr/ADR-019-computo-y-almacenamiento-institucional.md), [ADR-020](docs/adr/ADR-020-procesamiento-incremental-y-calidad.md), [ADR-021](docs/adr/ADR-021-modelo-sog-en-cluster.md) |
 

@@ -31,6 +31,25 @@ La conciliación verificó **6 bronce = 2 plata + 3 cuarentena + 1 duplicado**. 
 
 En local, con dependencias de máscara e hidrografía, pytest devolvió **110 aprobadas y 1 omitida**. La omitida requiere PySpark. Los Jobs realizan esa integración en Databricks.
 
+## Revisión de la compuerta de agua
+
+| Política sobre bronce del 1 de junio | Evaluados | Sin evidencia de agua | Tasa |
+|---|---:|---:|---:|
+| v2 · Ráster, tolerancia y WPI | 8.808.904 | 3.493.229 | 39,66% |
+| v3 · Añade NWN y Natural Earth | 8.808.904 | 272.801 | 3,10% |
+
+El análisis de las celdas con más rechazos en v2 incluyó Houston Ship Channel y Salmon Bay. Los casos de regresión para ambas ubicaciones, lago Michigan y tierra en Kansas pasaron. La diferencia que se observa es cambio de cobertura de la regla; no estima precisión en ausencia de etiquetas navegables.
+
+## Scheduler
+
+Databricks creó una [corrida `PERIODIC`](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/83886562675136/runs/261133119127309) a las 21:34 de Bogotá del 20 de noviembre de 2026. La cola respetó el máximo de una corrida activa. Al observar el evento se restauró el cron diario de las 06:00 en estado `PAUSED`.
+
+## Planes Spark
+
+Con filtro del 1 de junio sobre plata, `explain("formatted")` mostró `PartitionFilters` sobre `_batch_date` en presencia, trayectorias y matriz. Trayectorias ordenó la ventana tras `hashpartitioning(MMSI, dia)`. La matriz tuvo un intercambio por `(celda_lat, celda_lon, hora, MMSI)` para unicidad y otro por `(celda_lat, celda_lon, hora)` para consolidar la medida.
+
+En presencia, el primer plan redistribuía MMSI, código, nombre, país, tamaño y tipo de puerto, y día. Se redujo la llave a `hashpartitioning(MMSI, INDEX_NO, dia)`. El plan posterior mostró dos `BroadcastHashJoin Inner BuildRight`, uno para el cruce por celda y otro para incorporar atributos después del agregado. La inspección valida los operadores; la latencia de red requiere workers remotos.
+
 ## Gobierno observado
 
 | Ámbito | Principal | Acceso efectivo |
@@ -40,5 +59,7 @@ En local, con dependencias de máscara e hidrografía, pytest devolvió **110 ap
 | Volumen `clase10.equipo9.checkpoints` | `mine-group9` | `READ VOLUME`, `WRITE VOLUME` |
 | Jobs | `mine-group9` | `CAN_MANAGE_RUN` |
 | Tablero | `mine-group9` | `CAN_READ` |
+| Experimento MLflow | `mine-group9` | `CAN_READ` |
+| Modelo registrado en UC | `mine-group9` | `EXECUTE` |
 
 El esquema y el volumen pertenecen al docente. La API devolvió un rechazo al intentar crear un volumen nuevo y confirmó que DBFS público está deshabilitado. Los permisos de esquemas por rol requieren aprovisionamiento del administrador. [ADR-019](../../docs/adr/ADR-019-computo-y-almacenamiento-institucional.md).

@@ -84,27 +84,27 @@ def presencia_puertos(df_silver: Any, df_wpi: Any, cfg: dict[str, Any]):
 
     puertos = df_wpi.select(
         "INDEX_NO",
+        F.round("LATITUDE", dec).alias("celda_lat"),
+        F.round("LONGITUDE", dec).alias("celda_lon"),
+    )
+    atributos = df_wpi.select(
+        "INDEX_NO",
         "PORT_NAME",
         "COUNTRY",
-        "LATITUDE",
-        "LONGITUDE",
         "HARBORSIZE",
         "HARBORTYPE",
-    ).withColumn("celda_lat", F.round("LATITUDE", dec)).withColumn(
-        "celda_lon", F.round("LONGITUDE", dec)
     )
 
     cruce = ais.join(F.broadcast(puertos), on=["celda_lat", "celda_lon"], how="inner")
 
-    agregado = cruce.groupBy(
-        "MMSI", "INDEX_NO", "PORT_NAME", "COUNTRY", "HARBORSIZE", "HARBORTYPE", "dia"
-    ).agg(
+    agregado = cruce.groupBy("MMSI", "INDEX_NO", "dia").agg(
         F.count("*").alias("n_posiciones_en_puerto"),
         F.min("BaseDateTime").alias("primera_posicion"),
         F.max("BaseDateTime").alias("ultima_posicion"),
     )
 
-    return agregado.filter(F.col("n_posiciones_en_puerto") >= F.lit(minimo)).select(
+    presentes = agregado.where(F.col("n_posiciones_en_puerto") >= F.lit(minimo))
+    return presentes.join(F.broadcast(atributos), "INDEX_NO").select(
         "MMSI",
         "INDEX_NO",
         "PORT_NAME",

@@ -120,7 +120,8 @@ def prueba_poda(fecha):
     # input_file_name() no está disponible bajo Unity Catalog. _metadata expone
     # los archivos efectivamente tocados por el query a través de su ruta y byte size.
     tabla = tabla_silver_fqn(load_cluster_config())
-    base = spark.table(tabla)
+    version_delta = spark.sql(f"DESCRIBE HISTORY {tabla} LIMIT 1").first().version
+    base = spark.read.format("delta").option("versionAsOf", version_delta).table(tabla)
     dia = F.col("_batch_date") == F.lit(fecha).cast("date")
     zona = F.col("LAT").between(25, 32) & F.col("LON").between(-98, -88)
     zonas = base.select(
@@ -141,7 +142,7 @@ def prueba_poda(fecha):
         resultados[nombre] = _medir(q)
     assert resultados["con_poda"]["n"] == resultados["sin_poda"]["n"]
     assert resultados["con_poda"]["archivos"] < resultados["sin_poda"]["archivos"]
-    return resultados
+    return {"version_delta": version_delta, "fecha": fecha, **resultados}
 
 
 dbutils.widgets.text("fecha_proceso", "2023-06-08")
