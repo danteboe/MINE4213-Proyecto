@@ -12,6 +12,8 @@ OceanWatch procesa mensajes AIS de NOAA para consultar el tráfico, la presencia
 
 El DAG ejecuta **preparación → ingesta → plata → conciliación → oro → ML**. Auto Loader usa un checkpoint persistente y un sink Delta append-only. Plata aplica reglas, conserva los rechazos con causas y deduplica por buque y timestamp. Los pings del día que pasa conciliación alimentan los agregados y la inferencia. El IsolationForest queda versionado en Unity Catalog mediante MLflow. El SQL warehouse institucional sirve las consultas del tablero.
 
+El corpus institucional amplía la semana de la Entrega 1 al **1–8 de junio de 2023**. Los ocho días conciliaron con diferencia cero sobre **69.454.003 posiciones** en bronce.
+
 | Recurso | Ubicación |
 |---|---|
 | Tablas y modelo institucionales | `clase14.equipo9.oceanwatch_<capa>_<objeto>` |

@@ -6,7 +6,7 @@ Las compuertas registran causas estables. Una posición rechazada puede contar e
 |---|---|---|
 | LAT/LON nulas, inválidas, fuera del rango físico, centinelas | Cuarentena | Invalida la ubicación y puede romper la máscara o la grilla. |
 | `sin_evidencia_de_agua` | Cuarentena | Acepta agua en el ráster en el centro o en los ocho puntos vecinos a 0,02°, proximidad de hasta 0,02° a una vía navegable de NWN o lago de Natural Earth, o una celda del WPI. |
-| `mmsi_bien_formado`, `mmsi_mid_valido` | Cuarentena | El comportamiento se hereda del diagnóstico AIS. La política admite MMSI de buques en el rango definido en configuración; otras clases de identificador AIS quedan fuera del alcance. |
+| `mmsi_bien_formado`, `mmsi_mid_valido` | Cuarentena | El diagnóstico AIS motivó la política. El dominio admitido cubre MMSI de buques dentro del rango definido en configuración. |
 | Timestamp nulo o futuro, `timestamp_fuera_del_dia_fichero` | Cuarentena | Una fecha de evento UTC válida y coincidente con el archivo permite garantizar unicidad con un lote acotado. |
 | `sog_fuera_de_rango` | Cuarentena | Rechaza NaN, valores negativos y velocidades por encima de 80 kn por debajo del primer centinela AIS. |
 | SOG ausente o centinela ≥ 102,3 | Nulo en plata y excluido de ML | La falta de medición deja otras variables útiles. El centinela se marca con `sog_no_disponible`. |

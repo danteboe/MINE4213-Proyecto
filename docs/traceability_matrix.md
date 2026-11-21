@@ -3,7 +3,7 @@
 | Requisito | Implementación | Verificación institucional |
 |---|---|---|
 | 1 · Ingesta en streaming | Auto Loader, esquema explícito, Volume, checkpoint y Delta append-only. Dedup en plata por clave de negocio. | [Corrida inicial](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/83886562675136/runs/828952167457977) y [Job de verificación](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/719836273900213). |
-| 2 · Capas y calidad | Plata, cuarentena original y métricas; conciliación diaria antes de oro. | [Reglas](data_quality_rules.md), [contrato de oro](data_contract_gold.md) y [evidencia](../evidence/institucional/). |
+| 2 · Capas y calidad | Plata, cuarentena original, métricas y conciliación diaria antes de oro. | [Reglas](data_quality_rules.md), [contrato de oro](data_contract_gold.md) y [evidencia](../evidence/institucional/). |
 | 3 · Orquestación | Seis tareas en clúster dedicado, parámetro de fecha, reintentos, alertas y calendario de replay. | [Definición del Job](../resources/jobs/oceanwatch_pipeline.job.yml) y [runbook](runbook.md). |
 | 4 · Visualización | Consola con cuatro consultas parametrizadas sobre oro. | [Tablero publicado](https://dbc-b38f0852-ecf9.cloud.databricks.com/dashboardsv3/01f1e5507d1b18a5963d1a49e4329629/published). |
 | 5 · Gobernanza | Tablas y modelo en Unity Catalog, comentarios, contrato, grupo institucional y permisos en recursos. | [ADR-019](adr/ADR-019-computo-y-almacenamiento-institucional.md). La segregación por rol y esquema requiere acceso administrativo adicional. |

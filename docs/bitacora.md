@@ -22,6 +22,7 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 - Se autenticó la CLI contra el workspace del curso y se desplegó el bundle en el clúster personal dedicado de Juan David. El esquema `clase14.equipo9` y el volumen `clase10.equipo9.checkpoints` se seleccionaron a partir de los permisos efectivos del equipo.
 - Se implementó el sink Delta de streaming, el procesamiento diario por predicado, la compuerta de agua con tolerancia y la deduplicación determinista. La consola se publicó con credenciales individuales. El pipeline integra entrenamiento temporal, registro MLflow en UC y puntuación Arrow.
 - Los reintentos de preparación expusieron el tipo decimal usado por el DBF para el índice de puerto. La normalización del CSV del WPI corrigió la carga.
+- Se concluyó el backfill de los ocho días y la prueba de programación. El replay programado reprodujo fila por fila las anomalías del 8 de junio. La prueba de poda mantuvo el conteo y redujo el tamaño de archivos tocados en 66,1%.
 - Se actualizaron el runbook, el contrato de oro y la trazabilidad. Las decisiones sobre cómputo, exchanges y ML se registraron en los ADR-019 a 021. Los resultados institucionales se añaden a [evidencia](../evidence/institucional/).
 
 ### 2026-11-05 — Cierre consolidado (Req. 7 + documentación transversal) — Equipo OceanWatch
