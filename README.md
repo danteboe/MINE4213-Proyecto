@@ -25,7 +25,7 @@ El workspace del curso otorga privilegios al grupo `mine-group9` en un único es
 
 ### Reproducir
 
-Después de [autenticar la CLI con OAuth](docs/runbook.md), ejecute:
+Estos comandos reproducen la corrida inicial después de [autenticar la CLI con OAuth](docs/runbook.md).
 
 ```sh
 databricks bundle validate --strict
