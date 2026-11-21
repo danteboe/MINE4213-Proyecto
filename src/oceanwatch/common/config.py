@@ -71,7 +71,17 @@ def schema(cfg: dict[str, Any], nombre: str) -> str:
 
 def fqn(cfg: dict[str, Any], esquema: str, objeto: str) -> str:
     """Nombre totalmente calificado ``catalogo.esquema.objeto`` (three-part name)."""
+    if "namespace" in cfg:
+        return f"{cfg['namespace']}.oceanwatch_{esquema}_{objeto}"
     return f"{catalog_name(cfg)}.{schema(cfg, esquema)}.{objeto}"
+
+
+def load_cluster_config() -> dict[str, Any]:
+    """Resuelve el almacenamiento institucional sin alterar los artefactos de la Parte 1."""
+    cfg = load_config()
+    cfg.update(cfg["institucional"])
+    cfg["calidad"]["reglas"].update(cfg["compuertas_adicionales"])
+    return cfg
 
 
 def ais_struct_type(cfg: dict[str, Any]):

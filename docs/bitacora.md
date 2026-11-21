@@ -17,6 +17,13 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 
 ## Entradas
 
+### 2026-11-20 · Migración institucional a cómputo clásico
+
+- Se autenticó la CLI contra el workspace del curso y se desplegó el bundle en el clúster personal dedicado de Juan David. El esquema `clase14.equipo9` y el volumen `clase10.equipo9.checkpoints` se seleccionaron a partir de los permisos efectivos del equipo.
+- Se implementó el sink Delta de streaming, el procesamiento diario por predicado, la compuerta de agua con tolerancia y la deduplicación determinista. La consola se publicó con credenciales individuales. El pipeline integra entrenamiento temporal, registro MLflow en UC y puntuación Arrow.
+- Los reintentos de preparación expusieron el tipo decimal usado por el DBF para el índice de puerto. La normalización del CSV del WPI corrigió la carga.
+- Se actualizaron el runbook, el contrato de oro y la trazabilidad. Las decisiones sobre cómputo, exchanges y ML se registraron en los ADR-019 a 021. Los resultados institucionales se añaden a [evidencia](../evidence/institucional/).
+
 ### 2026-11-05 — Cierre consolidado (Req. 7 + documentación transversal) — Equipo OceanWatch
 - **Objetivo de la sesión:** consolidar la documentación de cierre de la Entrega 2 (sin nueva
   implementación): dejar el repo como punto de entrada reproducible, cerrar el Req. 7 y producir

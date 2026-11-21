@@ -311,6 +311,9 @@ def clasificar_celdas_en_agua(celdas: list[tuple[float, float]]) -> list[tuple[f
     Raises:
         MaskNoDisponibleError: si ``global_land_mask`` no está instalada (import perezoso).
     """
+    if not celdas:
+        return []
+
     import numpy as np
 
     from oceanwatch.quality.tierra_agua import MaskNoDisponibleError
@@ -323,8 +326,6 @@ def clasificar_celdas_en_agua(celdas: list[tuple[float, float]]) -> list[tuple[f
             "`%pip install global-land-mask==1.0.0` (serverless) o `pip install` (local)."
         ) from exc
 
-    if not celdas:
-        return []
     lat = np.array([float(c[0]) for c in celdas], dtype="float64")
     lon = np.array([float(c[1]) for c in celdas], dtype="float64")
     es_tierra = np.asarray(globe.is_land(lat, lon), dtype=bool)

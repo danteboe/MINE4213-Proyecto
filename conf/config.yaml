@@ -11,6 +11,23 @@ databricks:
   metastore: "metastore_aws_us_east_2"
   compute: "serverless"
 
+# Destino de Entrega 2. Los parámetros de arriba documentan el prototipo.
+institucional:
+  namespace: "clase14.equipo9"
+  ruta_volumen: "/Volumes/clase10/equipo9/checkpoints/oceanwatch_equipo9"
+  max_celdas_por_dia: 750000
+  tolerancia_costera_grados: 0.02
+  compuertas_adicionales:
+    coordenada_en_agua: { nombre: "sin_evidencia_de_agua", version: "v3", accion: "descartar_fila" }
+    sog_fuera_de_rango: { nombre: "sog_fuera_de_rango", version: "v1", accion: "descartar_fila" }
+    timestamp_fuera_del_dia_fichero: { nombre: "timestamp_fuera_del_dia_fichero", version: "v1", accion: "descartar_fila" }
+  ml_cluster:
+    experimento: "/Users/jd.torresa1@uniandes.edu.co/oceanwatch_anomalias_cluster"
+    train_dates: ["2023-06-01", "2023-06-02"]
+    validation_date: "2023-06-03"
+    max_filas_train: 100000
+    max_filas_validacion: 50000
+
 catalogo:
   nombre: "oceanwatch"
   esquemas:

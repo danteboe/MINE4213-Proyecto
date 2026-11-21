@@ -1,48 +1,45 @@
-# Arquitectura — Vista general Medallion (OceanWatch Analytics, Entrega 2)
-
-Diagrama editable del flujo de datos de extremo a extremo, desde el feed diario de NOAA hasta
-el dashboard y el modelo de ML. Refleja las decisiones de ADR-001 (medallion serverless),
-ADR-003 (ingesta zip → Auto Loader) y ADR-004 (Trigger.availableNow).
-
-Estado: **Diseñado (no ejecutado)**. La materialización real de cada capa pertenece a Fase 2+.
+# Arquitectura institucional de OceanWatch
 
 ```mermaid
 flowchart LR
-    A["NOAA .zip diario\nAIS_YYYY_MM_DD.zip"] --> B["Descompresión\n(zip -> CSV)"]
-    B --> C["Volume landing\noceanwatch.bronze.landing"]
-    C --> D["Auto Loader (cloudFiles)\nTrigger.availableNow\nesquema explícito 17 campos"]
-    D --> E["bronze\nposiciones AIS crudas"]
-    E --> F["silver\ncalidad + conformado"]
-    F --> G["quarantine\nregistros rechazados"]
-    F --> H["gold\nmatrices de tráfico\n(grilla lat/lon + WPI)"]
-    H --> I["Databricks Dashboard"]
-    F --> J["ml\nanomalías de velocidad (SOG)\nMLflow"]
-    K["World Port Index\nWPI.shp (shapefile)"] --> H
-    L["quality\nmétricas y reportes"] -.-> F
+    A[Archivo ZIP diario NOAA] --> L[CSV inmutable en volumen UC]
+    L -->|Auto Loader AvailableNow| B[Delta bronce por fecha UTC]
+    C[Checkpoint duradero] <--> B
+    W[World Port Index y máscara de agua] --> P[Compuertas y deduplicación del día]
+    B --> P
+    P --> Q[Cuarentena con registro original]
+    P --> M[Métricas por regla]
+    P --> S[Delta plata por fecha UTC]
+    B --> V{Conciliación}
+    Q --> V
+    S --> V
+    V -->|Conteos conciliados| G[Trayectorias, presencia y matrices oro]
+    S --> T[Características SOG]
+    G --> T
+    T --> R[MLflow y campeón en Unity Catalog]
+    R --> X[Oro de anomalías]
+    G --> D[Tablero AI/BI]
+    X --> D
 ```
 
-## Explicación del flujo
+## Cómputo y almacenamiento
 
-1. **NOAA .zip diario.** La fuente oficial (Marine Cadastre / NOAA) publica un `.zip` por día
-   con un CSV de posiciones AIS. El corpus de referencia es 1–7 de junio de 2023, pero el
-   diseño admite fechas y archivos nuevos del feed (resiliencia requerida).
-2. **Descompresión.** Spark y Auto Loader no leen `.zip` directamente (ADR-003); un paso previo
-   descomprime el zip a CSV.
-3. **Volume `landing`.** Los CSV descomprimidos aterrizan en `oceanwatch.bronze.landing`, la
-   zona de aterrizaje que Auto Loader vigila.
-4. **Auto Loader + Trigger.availableNow.** `cloudFiles` descubre incrementalmente los CSV
-   nuevos, aplica el esquema explícito de 17 campos con columna de datos rescatados (evolución
-   de esquema) y se dispara con `availableNow` (micro-batch que procesa lo disponible y se
-   detiene), orquestado por un Job con cron en UTC (ADR-004).
-5. **bronze.** Posiciones AIS crudas en Delta, con idempotencia `txnAppId`/`txnVersion`.
-6. **silver.** Datos saneados y conformados tras las reglas de calidad; los registros que no
-   las superan se desvían a **`quarantine`** (patrón dead-letter) y las métricas se registran
-   en **`quality`**.
-7. **gold.** Matrices de tráfico agregadas sobre la **grilla espacial por redondeo lat/lon**
-   (NO H3, ADR-001), cruzadas con el **World Port Index** leído como shapefile (`WPI.shp`).
-8. **Dashboard.** Un dashboard de Databricks consume las tablas de oro.
-9. **ml.** La detección de anomalías de velocidad (SOG) consume features derivadas de silver y
-   se versiona con MLflow (ADR-005).
+Las seis tareas usan el clúster clásico dedicado de Juan David. El clúster disponible es de un nodo `i3.xlarge`, con driver y ejecutores locales. Spark conserva el paralelismo por partición. Un ensayo en esta configuración mide poda, exchanges lógicos y una ejecución real de Spark, pero el coste de red y el escalamiento horizontal requieren un clúster con workers. El ID de cómputo se resuelve en despliegue y puede cambiarse para repetir el mismo DAG en otro clúster compatible.
 
-> Las capas y volúmenes se crean con el bootstrap idempotente (ADR-002), hoy **PENDIENTE DE
-> EJECUCIÓN**.
+El catálogo y esquema académicos disponibles son `clase14.equipo9`. Las capas comparten ese esquema con prefijos `oceanwatch_bronze_`, `oceanwatch_silver_`, `oceanwatch_quarantine_`, `oceanwatch_quality_`, `oceanwatch_gold_` y `oceanwatch_ml_`. El volumen `clase10.equipo9.checkpoints` se usa bajo una ruta exclusiva del proyecto, con landing y checkpoint en subárboles distintos. Las pruebas utilizan rutas independientes. El [ADR-019](../adr/ADR-019-computo-y-almacenamiento-institucional.md) documenta el acceso efectivo y los límites de segregación.
+
+La fuente de hechos es el mensaje por `(MMSI, BaseDateTime)` en UTC. El día del archivo identifica el lote. Los timestamps que caen fuera de ese día van a cuarentena y se cuentan; esto mantiene disjuntos los espacios de claves para el backfill diario. Con la Entrega 1 se comparte la fuente pública, el esquema explícito, el diagnóstico de centinelas y la grilla de dos decimales. La prueba de almacenamiento de esa entrega motivó el filtro y partición por fecha para hechos voluminosos. Las tablas pequeñas usan el filtro de fecha y estadísticas Delta para evitar particiones físicas pequeñas.
+
+## Coste y distribución
+
+| Tramo | Trabajo y exchanges esperados | Decisión |
+|---|---|---|
+| Auto Loader | Parseo CSV paralelo y commits Delta | ZIP descomprimido por streaming de bytes en disco local. El stream usa el sink Delta directo y un checkpoint estable. |
+| Geocalidad | Agregación de celdas distintas y broadcast de tres columnas | Una evaluación vectorizada sobre celdas, límite de 750.000 por día y fallo explícito si se excede. La máscara ráster vive una vez en el driver. |
+| Plata | Una agregación por clave válida para conservar un representante y la multiplicidad | `max(struct(...))` determinista con preferencia de SOG real y fila sin rescate. Las reglas se miden con agregados condicionales de una sola pasada. Se reutiliza la clasificación en disco de Spark mientras se publican plata, cuarentena y métricas. |
+| Trayectorias | Exchange por buque y día, orden temporal local y agregación por la misma llave | Ventanas nativas con `lag`, evitando coleccionar la trayectoria de cada buque al driver. |
+| Presencia | Broadcast del WPI y agregación de coincidencias | Join por celda con 3.669 puertos, sin cruzar cada ping con todo el catálogo. |
+| Matriz de tráfico | Redistribución por grilla/hora y conteo exacto de MMSI | Se mantiene el conteo exacto para el grano de negocio. El agregado diario lee el resultado horario ya compacto. |
+| ML | Ventana por buque/día, broadcast por tipo y lotes Arrow | La muestra entrenada tiene límite estricto. La inferencia conserva las filas y produce una sola puntuación por mensaje en el ejecutor. |
+
+Los planes `explain("formatted")` se imprimen en plata, oro y ML. AQE ajusta el número de particiones según tamaño y mantiene las redistribuciones necesarias para el orden y la unicidad. Consulte el Job de verificación para la medición del efecto de la poda. Bibliografía de ejecución y poda en el [ADR-020](../adr/ADR-020-procesamiento-incremental-y-calidad.md).

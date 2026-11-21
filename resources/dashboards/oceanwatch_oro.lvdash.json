@@ -5,9 +5,9 @@
       "displayName": "V1 - Matriz de trafico diaria (oro)",
       "queryLines": [
         "SELECT celda_lat, celda_lon, intensidad, buques\n",
-        "FROM oceanwatch.gold.matriz_trafico_diaria\n",
+        "FROM clase14.equipo9.oceanwatch_gold_matriz_trafico_diaria\n",
         "WHERE dia = :fecha\n",
-        "ORDER BY intensidad DESC\n",
+        "ORDER BY intensidad DESC, celda_lat, celda_lon\n",
         "LIMIT 2000"
       ],
       "parameters": [
@@ -19,7 +19,7 @@
             "values": {
               "dataType": "DATE",
               "values": [
-                { "value": "2023-06-03" }
+                { "value": "2023-06-08" }
               ]
             }
           }
@@ -30,13 +30,13 @@
       "name": "ds_ranking_puertos",
       "displayName": "V2 - Ranking de puertos (oro)",
       "queryLines": [
-        "SELECT PORT_NAME, COUNTRY,\n",
+        "SELECT INDEX_NO, PORT_NAME, COUNTRY,\n",
         "       COUNT(DISTINCT MMSI)        AS buques_distintos,\n",
-        "       SUM(n_posiciones_en_puerto) AS visitas\n",
-        "FROM oceanwatch.gold.presencia_puertos\n",
+        "       SUM(n_posiciones_en_puerto) AS posiciones_ais\n",
+        "FROM clase14.equipo9.oceanwatch_gold_presencia_puertos\n",
         "WHERE dia = :fecha\n",
-        "GROUP BY PORT_NAME, COUNTRY\n",
-        "ORDER BY buques_distintos DESC\n",
+        "GROUP BY INDEX_NO, PORT_NAME, COUNTRY\n",
+        "ORDER BY buques_distintos DESC, INDEX_NO\n",
         "LIMIT 15"
       ],
       "parameters": [
@@ -48,7 +48,7 @@
             "values": {
               "dataType": "DATE",
               "values": [
-                { "value": "2023-06-03" }
+                { "value": "2023-06-08" }
               ]
             }
           }
@@ -62,9 +62,9 @@
         "SELECT MMSI, PORT_NAME, COUNTRY,\n",
         "       n_posiciones_en_puerto,\n",
         "       primera_posicion, ultima_posicion\n",
-        "FROM oceanwatch.gold.presencia_puertos\n",
+        "FROM clase14.equipo9.oceanwatch_gold_presencia_puertos\n",
         "WHERE dia = :fecha\n",
-        "ORDER BY n_posiciones_en_puerto DESC\n",
+        "ORDER BY n_posiciones_en_puerto DESC, MMSI, INDEX_NO\n",
         "LIMIT 500"
       ],
       "parameters": [
@@ -76,7 +76,7 @@
             "values": {
               "dataType": "DATE",
               "values": [
-                { "value": "2023-06-03" }
+                { "value": "2023-06-08" }
               ]
             }
           }
@@ -89,9 +89,9 @@
       "queryLines": [
         "SELECT MMSI, BaseDateTime, LAT, LON, SOG, VesselType,\n",
         "       z_sog, score_anomalia, razon\n",
-        "FROM oceanwatch.gold.anomalias_velocidad\n",
+        "FROM clase14.equipo9.oceanwatch_gold_anomalias_velocidad\n",
         "WHERE _batch_date = :fecha AND es_anomalia = true\n",
-        "ORDER BY score_anomalia ASC\n",
+        "ORDER BY score_anomalia ASC, MMSI, BaseDateTime\n",
         "LIMIT 500"
       ],
       "parameters": [
@@ -103,7 +103,7 @@
             "values": {
               "dataType": "DATE",
               "values": [
-                { "value": "2023-06-03" }
+                { "value": "2023-06-08" }
               ]
             }
           }
@@ -119,7 +119,7 @@
         {
           "widget": {
             "name": "titulo",
-            "textbox_spec": "# OceanWatch - Consola de trafico maritimo (capa oro)\nTablero AI/BI alimentado EXCLUSIVAMENTE de `oceanwatch.gold`. Use el filtro de **fecha** para cambiar el dia analizado (corpus: 2023-06-01/02/03; las anomalias solo existen el 2023-06-03)."
+            "textbox_spec": "# OceanWatch · Tráfico marítimo\nSeleccione una fecha UTC. El mapa muestra las 2.000 celdas con más posiciones AIS. Consulte las anomalías para las fechas puntuadas por el modelo."
           },
           "position": { "x": 0, "y": 0, "width": 6, "height": 2 }
         },
@@ -208,7 +208,7 @@
                   "displayName": "intensidad"
                 },
                 "extra": [
-                  { "fieldName": "buques", "displayName": "buques" }
+                  { "fieldName": "buques", "displayName": "Buque-horas" }
                 ]
               },
               "frame": {
@@ -231,7 +231,7 @@
                     { "name": "PORT_NAME", "expression": "`PORT_NAME`" },
                     { "name": "COUNTRY", "expression": "`COUNTRY`" },
                     { "name": "buques_distintos", "expression": "`buques_distintos`" },
-                    { "name": "visitas", "expression": "`visitas`" }
+                    { "name": "posiciones_ais", "expression": "`posiciones_ais`" }
                   ],
                   "disaggregated": true
                 }
@@ -257,7 +257,7 @@
                   "displayName": "Pais"
                 },
                 "extra": [
-                  { "fieldName": "visitas", "displayName": "visitas" }
+                  { "fieldName": "posiciones_ais", "displayName": "Posiciones AIS" }
                 ]
               },
               "frame": {

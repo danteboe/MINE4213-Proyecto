@@ -94,7 +94,7 @@ def presencia_puertos(df_silver: Any, df_wpi: Any, cfg: dict[str, Any]):
         "celda_lon", F.round("LONGITUDE", dec)
     )
 
-    cruce = ais.join(puertos, on=["celda_lat", "celda_lon"], how="inner")
+    cruce = ais.join(F.broadcast(puertos), on=["celda_lat", "celda_lon"], how="inner")
 
     agregado = cruce.groupBy(
         "MMSI", "INDEX_NO", "PORT_NAME", "COUNTRY", "HARBORSIZE", "HARBORTYPE", "dia"

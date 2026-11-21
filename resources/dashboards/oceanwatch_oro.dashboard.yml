@@ -1,0 +1,10 @@
+resources:
+  dashboards:
+    oceanwatch_oro:
+      display_name: OceanWatch | Consola de tráfico | Equipo 9
+      file_path: oceanwatch_oro.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      embed_credentials: false
+      permissions:
+        - group_name: mine-group9
+          level: CAN_READ

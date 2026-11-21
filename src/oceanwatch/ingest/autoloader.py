@@ -14,11 +14,13 @@ from typing import Any, Optional
 
 from oceanwatch.common.config import catalog_name, fqn, schema
 from oceanwatch.ingest.paths import landing_csv_root
-from oceanwatch.ingest.schema import ais_struct_type
+from oceanwatch.ingest.schema import ais_struct_type, columnas_ais, columnas_auditoria
 
 
 def _checkpoint_base(cfg: dict[str, Any]) -> str:
     """Ruta base del checkpoint del stream bajo el Volume de checkpoints."""
+    if "ruta_volumen" in cfg:
+        return f"{cfg['ruta_volumen']}/stream/bronze/v1"
     catalogo = catalog_name(cfg)
     bronze = schema(cfg, "bronze")
     checkpoints = cfg["volumenes"]["checkpoints"]
@@ -53,7 +55,9 @@ def leer_stream_csv(spark: Any, cfg: dict[str, Any], fecha: Optional[str] = None
         .option("cloudFiles.format", "csv")
         .option("header", "true")
         .option("cloudFiles.schemaLocation", schema_location)
+        .option("cloudFiles.schemaEvolutionMode", "rescue")
         .option("rescuedDataColumn", rescued)
+        .option("pathGlobFilter", "*.csv")
         .option("recursiveFileLookup", "true")
         .schema(ais_struct_type(cfg))
         .load(ruta)
@@ -104,6 +108,14 @@ def escribir_bronze(df: Any, cfg: dict[str, Any]):
     El checkpoint vive en el Volume de checkpoints. Devuelve el ``StreamingQuery``.
     """
     checkpoint = f"{_checkpoint_base(cfg)}/_checkpoint"
+    if "ruta_volumen" in cfg:
+        return (
+            df.writeStream.format("delta")
+            .outputMode("append")
+            .option("checkpointLocation", checkpoint)
+            .trigger(availableNow=True)
+            .toTable(tabla_bronze_fqn(cfg))
+        )
     return (
         df.writeStream.option("checkpointLocation", checkpoint)
         .foreachBatch(lambda bdf, bid: _escribir_batch(bdf, bid, cfg))
@@ -129,6 +141,8 @@ def ejecutar_ingesta(spark: Any, cfg: dict[str, Any], fechas: Optional[list[str]
     """
     df = leer_stream_csv(spark, cfg, fecha=None)
     df = enriquecer_auditoria(df, cfg)
+    if "ruta_volumen" in cfg:
+        df = df.select(*columnas_ais(cfg), *columnas_auditoria())
     query = escribir_bronze(df, cfg)
     query.awaitTermination()
     return query

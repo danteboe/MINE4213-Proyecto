@@ -39,6 +39,8 @@ def _validar_fecha(fecha_iso: str) -> str:
 
 def _volumen_landing_base(cfg: dict[str, Any]) -> str:
     """Ruta base del volumen de landing: ``/Volumes/<cat>/<bronze>/<landing>``."""
+    if "ruta_volumen" in cfg:
+        return f"{cfg['ruta_volumen']}/landing"
     catalogo = catalog_name(cfg)
     bronze = schema(cfg, "bronze")
     landing = cfg["volumenes"]["landing"]
@@ -91,6 +93,8 @@ def url_zip_noaa(cfg: dict[str, Any], fecha_iso: str) -> str:
     """
     fuente = cfg["fuente_noaa"]
     base_url = str(fuente["base_url"]).rstrip("/")
+    if "ruta_volumen" in cfg:
+        base_url = f"{base_url.rsplit('/', 1)[0]}/{_validar_fecha(fecha_iso)[:4]}"
     fecha_guion_bajo = _validar_fecha(fecha_iso).replace("-", "_")
     nombre = str(fuente["patron_archivo"]).format(fecha=fecha_guion_bajo)
     return f"{base_url}/{nombre}"

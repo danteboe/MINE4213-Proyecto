@@ -41,7 +41,7 @@ def _haversine_km_expr(lat1: Any, lon1: Any, lat2: Any, lon2: Any):
     dlat = F.radians(lat2 - lat1)
     dlon = F.radians(lon2 - lon1)
     a = F.pow(F.sin(dlat / 2), 2) + F.cos(rlat1) * F.cos(rlat2) * F.pow(F.sin(dlon / 2), 2)
-    c = 2 * F.asin(F.sqrt(a))
+    c = 2 * F.asin(F.sqrt(F.when(a > 1, F.lit(1.0)).otherwise(a)))
     return F.lit(RADIO_TERRESTRE_KM) * c
 
 

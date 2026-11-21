@@ -111,3 +111,16 @@ def test_clasificar_celdas_en_agua_lista_vacia():
     from oceanwatch.quality.materializar import clasificar_celdas_en_agua
 
     assert clasificar_celdas_en_agua([]) == []
+
+
+def test_hidrografia_recupera_canales_y_lagos_sin_admitir_tierra_lejana():
+    pytest.importorskip("shapely")
+    np = pytest.importorskip("numpy")
+    from oceanwatch.quality.hidrografia import agregar_evidencia_hidrografica
+
+    # Houston Ship Channel, Salmon Bay, tierra en Kansas y lago Michigan.
+    lat = np.array([29.77, 47.66, 38.5, 43.0])
+    lon = np.array([-95.10, -122.38, -98.0, -87.0])
+    agua = np.zeros(len(lat), dtype=bool)
+    agregar_evidencia_hidrografica(agua, lat, lon, margen=0.02)
+    assert agua.tolist() == [True, True, False, True]

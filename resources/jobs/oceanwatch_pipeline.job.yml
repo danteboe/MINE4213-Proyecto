@@ -1,132 +1,124 @@
-# =============================================================================
-# Job de orquestación OceanWatch (Req. 3, Fase 4) — definición DAB.
-# =============================================================================
-# Pipeline lineal de 4 tareas notebook_task SERVERLESS (sin new_cluster; el curso
-# solo tiene cómputo serverless):
-#     ingesta -> plata_calidad -> conciliacion (compuerta WAP) -> oro
-# El parámetro fecha_proceso (default 2023-06-03) fluye a las 4 tareas vía
-# {{job.parameters.fecha_proceso}} -> base_parameters -> dbutils.widgets. La
-# identidad de la corrida ({{job.run_id}}/{{job.id}}/{{task.name}}) alimenta la
-# auditoría oceanwatch.quality.ejecuciones_job. Los valores (reintentos, cron,
-# timezone, emails) replican conf/config.yaml (bloque orquestacion). SIN secretos.
-# =============================================================================
 resources:
   jobs:
     oceanwatch_pipeline_entrega2:
-      name: oceanwatch_pipeline_entrega2
-      description: >-
-        Pipeline medallion AIS (NOAA): ingesta Auto Loader -> plata/calidad (CTAS)
-        -> conciliación (compuerta Write-Audit-Publish) -> oro (CTAS). Cómputo
-        serverless. Req. 3 (Orquestación) de la Entrega 2, MINE 4213.
-
-      # Parámetro del Job propagado a cada tarea (backfill = pasar una fecha pasada).
+      name: OceanWatch | Entrega 2 | Equipo 9
+      description: Replay del archivo AIS de NOAA en cómputo clásico con Unity Catalog.
+      permissions:
+        - group_name: mine-group9
+          level: CAN_MANAGE_RUN
+      max_concurrent_runs: 1
+      queue:
+        enabled: true
       parameters:
         - name: fecha_proceso
-          default: "2023-06-03"
-
-      # Cron de PRODUCCIÓN (06:00 America/Bogota). PAUSED al desplegar: la corrida de
-      # demostración SCHEDULED se activa aparte en FEAT-002 y luego se restablece.
+          default: "2023-06-08"
+        - name: fecha_inicio
+          default: ""
+        - name: entrenar
+          default: "false"
       schedule:
         quartz_cron_expression: "0 0 6 * * ?"
         timezone_id: America/Bogota
-        pause_status: PAUSED
-
-      # Notificaciones de correo del Job (éxito / fallo / duración excesiva).
+        pause_status: ${var.pause_status}
       email_notifications:
-        on_success:
-          - jd.torresa1@uniandes.edu.co
         on_failure:
           - jd.torresa1@uniandes.edu.co
         on_duration_warning_threshold_exceeded:
           - jd.torresa1@uniandes.edu.co
-      # Umbral de alerta de duración (para on_duration_warning): 1 hora.
       health:
         rules:
           - metric: RUN_DURATION_SECONDS
             op: GREATER_THAN
-            value: 3600
-
+            value: 5400
       tasks:
-        # ------------------------------------------------------------------ ingesta
-        - task_key: ingesta
+        - task_key: preparar
+          existing_cluster_id: ${var.cluster_id}
           notebook_task:
-            notebook_path: ${var.workspace_oceanwatch}/notebooks/fase4_tarea_ingesta
+            notebook_path: ../../notebooks/oceanwatch_cluster.py
             base_parameters:
-              fecha_proceso: "{{job.parameters.fecha_proceso}}"
               job_run_id: "{{job.run_id}}"
               job_id: "{{job.id}}"
               task_key: "{{task.name}}"
-          # Red NOAA + arranque serverless = fallos transitorios -> 2 reintentos.
+              trigger: "{{job.trigger.type}}"
+          timeout_seconds: 5400
           max_retries: 2
           min_retry_interval_millis: 60000
-
-        # ----------------------------------------------------------- plata_calidad
+        - task_key: ingesta
+          depends_on:
+            - task_key: preparar
+          existing_cluster_id: ${var.cluster_id}
+          notebook_task:
+            notebook_path: ../../notebooks/oceanwatch_cluster.py
+            base_parameters:
+              job_run_id: "{{job.run_id}}"
+              job_id: "{{job.id}}"
+              task_key: "{{task.name}}"
+              trigger: "{{job.trigger.type}}"
+          timeout_seconds: 5400
+          max_retries: 2
+          min_retry_interval_millis: 60000
         - task_key: plata_calidad
           depends_on:
             - task_key: ingesta
+          existing_cluster_id: ${var.cluster_id}
+          libraries:
+            - pypi:
+                package: global-land-mask==1.0.0
+            - pypi:
+                package: shapely==2.1.2
           notebook_task:
-            notebook_path: ${var.workspace_oceanwatch}/notebooks/fase4_tarea_plata
+            notebook_path: ../../notebooks/oceanwatch_cluster.py
             base_parameters:
-              fecha_proceso: "{{job.parameters.fecha_proceso}}"
               job_run_id: "{{job.run_id}}"
               job_id: "{{job.id}}"
               task_key: "{{task.name}}"
-          # CREATE OR REPLACE determinista -> 1 reintento ante fallo transitorio.
+              trigger: "{{job.trigger.type}}"
+          timeout_seconds: 5400
           max_retries: 1
           min_retry_interval_millis: 60000
-
-        # ------------------------------------------------------------ conciliacion
         - task_key: conciliacion
           depends_on:
             - task_key: plata_calidad
+          existing_cluster_id: ${var.cluster_id}
           notebook_task:
-            notebook_path: ${var.workspace_oceanwatch}/notebooks/fase4_tarea_conciliacion
+            notebook_path: ../../notebooks/oceanwatch_cluster.py
             base_parameters:
-              fecha_proceso: "{{job.parameters.fecha_proceso}}"
               job_run_id: "{{job.run_id}}"
               job_id: "{{job.id}}"
               task_key: "{{task.name}}"
-          # Compuerta WAP: invariante que no cuadra NO es transitorio -> 0 reintentos.
+              trigger: "{{job.trigger.type}}"
+          timeout_seconds: 900
           max_retries: 0
-
-        # ------------------------------------------------------------------- oro
         - task_key: oro
           depends_on:
             - task_key: conciliacion
+          existing_cluster_id: ${var.cluster_id}
           notebook_task:
-            notebook_path: ${var.workspace_oceanwatch}/notebooks/fase4_tarea_oro
+            notebook_path: ../../notebooks/oceanwatch_cluster.py
             base_parameters:
-              fecha_proceso: "{{job.parameters.fecha_proceso}}"
               job_run_id: "{{job.run_id}}"
               job_id: "{{job.id}}"
               task_key: "{{task.name}}"
+              trigger: "{{job.trigger.type}}"
+          timeout_seconds: 5400
           max_retries: 1
           min_retry_interval_millis: 60000
-
-        # ------------------------------------------------------------ ml_anomalias
-        # Fase 6 (Req. 6, ML con MLflow). Inferencia batch del detector de anomalías
-        # de velocidad SOG: carga el modelo campeón @champion desde Unity Catalog y
-        # puebla oceanwatch.gold.anomalias_velocidad para fecha_proceso. Cuelga de
-        # `oro` (el oro ya está materializado; la silver.ais_clean que lee ya existe).
         - task_key: ml_anomalias
           depends_on:
             - task_key: oro
+          existing_cluster_id: ${var.cluster_id}
+          libraries:
+            - pypi:
+                package: mlflow==3.11.0
+            - pypi:
+                package: scikit-learn==1.8.0
           notebook_task:
-            notebook_path: ${var.workspace_oceanwatch}/notebooks/fase6_tarea_ml_anomalias
+            notebook_path: ../../notebooks/oceanwatch_cluster.py
             base_parameters:
-              fecha_proceso: "{{job.parameters.fecha_proceso}}"
               job_run_id: "{{job.run_id}}"
               job_id: "{{job.id}}"
               task_key: "{{task.name}}"
-          # Inferencia DETERMINISTA (modelo fijo + escritura DELETE+INSERT idempotente):
-          # un fallo típico es transitorio (arranque serverless, carga del modelo UC)
-          # -> 1 reintento basta; no hay riesgo de duplicar por la idempotencia.
+              trigger: "{{job.trigger.type}}"
+          timeout_seconds: 5400
           max_retries: 1
           min_retry_interval_millis: 60000
-
-        # ------------------------------------------------------------------------
-        # NODO FUTURO (documentado, NO implementado en esta entrega):
-        #   - refresh_dashboard: depends_on: [oro]   (Fase 7, dashboard de Databricks)
-        # Colgará de `oro` como nueva task dashboard_task serverless. El nodo `ml`
-        # (ml_anomalias) ya está IMPLEMENTADO arriba (Fase 6).
-        # ------------------------------------------------------------------------

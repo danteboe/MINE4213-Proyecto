@@ -1,0 +1,24 @@
+resources:
+  jobs:
+    oceanwatch_verificacion:
+      name: OceanWatch | Verificación | Equipo 9
+      max_concurrent_runs: 1
+      permissions:
+        - group_name: mine-group9
+          level: CAN_MANAGE_RUN
+      parameters:
+        - name: fecha_proceso
+          default: "2023-06-08"
+        - name: medir_poda
+          default: "true"
+      tasks:
+        - task_key: verificar
+          existing_cluster_id: ${var.cluster_id}
+          libraries:
+            - pypi:
+                package: global-land-mask==1.0.0
+            - pypi:
+                package: shapely==2.1.2
+          notebook_task:
+            notebook_path: ../../notebooks/oceanwatch_verificacion.py
+          timeout_seconds: 1800
