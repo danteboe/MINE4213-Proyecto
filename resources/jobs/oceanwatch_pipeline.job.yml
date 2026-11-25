@@ -2,7 +2,7 @@ resources:
   jobs:
     oceanwatch_pipeline_entrega2:
       name: OceanWatch | Entrega 2 | Equipo 9
-      description: Replay del archivo AIS de NOAA en cómputo clásico con Unity Catalog.
+      description: Procesa archivos AIS al llegar al volumen y admite backfill manual de NOAA.
       permissions:
         - group_name: mine-group9
           level: CAN_MANAGE_RUN
@@ -11,15 +11,17 @@ resources:
         enabled: true
       parameters:
         - name: fecha_proceso
-          default: "2023-06-08"
+          default: ""
         - name: fecha_inicio
           default: ""
         - name: entrenar
           default: "false"
-      schedule:
-        quartz_cron_expression: "0 0 6 * * ?"
-        timezone_id: America/Bogota
+      trigger:
         pause_status: ${var.pause_status}
+        file_arrival:
+          url: ${var.ruta_entrada}
+          min_time_between_triggers_seconds: 60
+          wait_after_last_change_seconds: 60
       email_notifications:
         on_failure:
           - jd.torresa1@uniandes.edu.co
@@ -40,6 +42,7 @@ resources:
               job_id: "{{job.id}}"
               task_key: "{{task.name}}"
               trigger: "{{job.trigger.type}}"
+              ruta_entrada: ${var.ruta_entrada}
           timeout_seconds: 5400
           max_retries: 2
           min_retry_interval_millis: 60000
@@ -54,6 +57,7 @@ resources:
               job_id: "{{job.id}}"
               task_key: "{{task.name}}"
               trigger: "{{job.trigger.type}}"
+              ruta_entrada: ${var.ruta_entrada}
           timeout_seconds: 5400
           max_retries: 2
           min_retry_interval_millis: 60000

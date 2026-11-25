@@ -21,6 +21,6 @@ flowchart LR
 
 El Job admite una corrida activa. Lakeflow guarda las solicitudes adicionales en cola y evita dos escritores simultáneos sobre el checkpoint. Cada tarea usa la identidad propietaria de la corrida y se vincula por `existing_cluster_id`. El grupo tiene capacidad de solicitar y seguir corridas. La auditoría usa una fila por corrida y tarea, por lo que un reintento actualiza el resultado previo y los intentos individuales permanecen en Lakeflow.
 
-La sesión se configura en UTC. El parámetro `fecha_proceso` apunta a un objeto diario en el archivo NOAA. El cron se interpreta en `America/Bogota`. La consola actualiza sus consultas al abrir el tablero o cambiar la fecha. El Job de verificación tiene un espacio de trabajo aislado para inyectar fallos sin contaminar los datos del DAG.
+La sesión se configura en UTC. La definición de File arrival apunta solo a `landing/inbox/` y permanece pausada hasta que el rol institucional pueda aprovisionar eventos de AWS. Con `fecha_proceso` vacía, ingesta extrae las fechas de los nombres y persiste un manifiesto por corrida. Plata, conciliación, oro e inferencia leen ese mismo manifiesto. Las confirmaciones se escriben tras inferencia. Un operador también puede pasar `fecha_proceso` para descargar y procesar una fecha explícita de NOAA. El Job de verificación usa un espacio aislado para inyectar fallos.
 
-Definiciones en [DAB del pipeline](../../resources/jobs/oceanwatch_pipeline.job.yml) y [runbook](../runbook.md).
+Definiciones en [DAB del pipeline](../../resources/jobs/oceanwatch_pipeline.job.yml), [ADR-022](../adr/ADR-022-llegada-de-archivos.md) y [runbook](../runbook.md).

@@ -108,6 +108,8 @@ Las cuatro consultas parametrizadas del tablero respondieron para el 8 de junio.
 
 ## Scheduler
 
+La [prueba de carga por archivo](llegada_archivos.md) documenta el flujo vigente y el bloqueo al activar File arrival. Los siguientes resultados pertenecen a la prueba histórica del cron.
+
 Databricks creó una [corrida `PERIODIC`](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/83886562675136/runs/261133119127309) a las 21:34 de Bogotá del 20 de noviembre de 2026. La cola respetó el máximo de una corrida activa y liberó el replay al terminar el backfill. El replay terminó en **`SUCCESS`**. Al observar el evento se restauró el cron diario de las 06:00 en estado `PAUSED`.
 
 El replay del 8 de junio reutilizó el CSV y el checkpoint, leyó 0 posiciones nuevas y reprodujo la conciliación de ese día. La comparación SQL de la tabla de anomalías con el snapshot Delta 2 usó `EXCEPT ALL` en ambas direcciones. Los dos resultados contenían **85.587 filas** de la versión 1 del modelo, con **0 faltantes y 0 adicionales**.

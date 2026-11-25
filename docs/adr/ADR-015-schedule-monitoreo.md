@@ -1,5 +1,7 @@
 # ADR-015: Agendamiento (cron Quartz + timezone) y monitoreo/alertas del Job
 
+La decisión de disparo corresponde al prototipo de Free Edition. La arquitectura institucional usa la definición por llegada descrita en [ADR-022](ADR-022-llegada-de-archivos.md).
+
 - **Estado:** Aceptado
 - **Fecha:** 2026-11-05
 - **Requisito(s) de la rúbrica:** Req. 3 (Orquestación, 20%)

@@ -7,23 +7,36 @@ OceanWatch procesa mensajes AIS de NOAA para consultar el tráfico, la presencia
 - [Job de Lakeflow](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/83886562675136) · seis tareas en el clúster personal de Juan David.
 - [Tablero AI/BI](https://dbc-b38f0852-ecf9.cloud.databricks.com/dashboardsv3/01f1e5507d1b18a5963d1a49e4329629/published) · mapa de intensidad, ranking de puertos, buques en puerto y anomalías por fecha UTC.
 - [Arquitectura Spark](docs/architecture/medallion-overview.md) · particiones, broadcast, ventanas y conciliación.
-- [Runbook](docs/runbook.md) · despliegue, entrenamiento inicial, backfill, agenda y reparación.
+- [Runbook](docs/runbook.md) · despliegue, carga desde el volumen, backfill y reparación.
 - [Trazabilidad](docs/traceability_matrix.md) y [evidencia institucional](evidence/institucional/) · alcance y resultados observados.
 
 El DAG ejecuta **preparación → ingesta → plata → conciliación → oro → ML**. Auto Loader usa un checkpoint persistente y un sink Delta append-only. Plata aplica reglas, conserva los rechazos con causas y deduplica por buque y timestamp. Los pings del día que pasa conciliación alimentan los agregados y la inferencia. El IsolationForest queda versionado en Unity Catalog mediante MLflow. El SQL warehouse institucional sirve las consultas del tablero.
 
-El corpus institucional amplía la semana de la Entrega 1 al **1–8 de junio de 2023**. Los ocho días conciliaron con diferencia cero sobre **69.454.003 posiciones** en bronce.
+El backfill institucional inicial cubrió el **1–8 de junio de 2023**. Los ocho días conciliaron con diferencia cero sobre **69.454.003 posiciones** en bronce. La prueba de incorporación desde el volumen del 9 de junio está en la [evidencia institucional](evidence/institucional/llegada_archivos.md).
 
 | Recurso | Ubicación |
 |---|---|
 | Tablas y modelo institucionales | `clase14.equipo9.oceanwatch_<capa>_<objeto>` |
 | Landing y checkpoint | `/Volumes/clase10/equipo9/checkpoints/oceanwatch_equipo9` |
+| Bandeja de archivos nuevos | `/Volumes/clase10/equipo9/checkpoints/oceanwatch_equipo9/landing/inbox/` |
 | Configuración | [conf/config.yaml](conf/config.yaml), sección `institucional` |
 | Despliegue | [databricks.yml](databricks.yml), [Jobs](resources/jobs/), [tablero](resources/dashboards/) y [recursos ML](resources/ml/) |
 | Entrypoints | [Pipeline](notebooks/oceanwatch_cluster.py) y [verificación](notebooks/oceanwatch_verificacion.py) |
-| Decisiones | [ADR-019](docs/adr/ADR-019-computo-y-almacenamiento-institucional.md), [ADR-020](docs/adr/ADR-020-procesamiento-incremental-y-calidad.md), [ADR-021](docs/adr/ADR-021-modelo-sog-en-cluster.md) |
+| Decisiones | [ADR-019](docs/adr/ADR-019-computo-y-almacenamiento-institucional.md), [ADR-020](docs/adr/ADR-020-procesamiento-incremental-y-calidad.md), [ADR-021](docs/adr/ADR-021-modelo-sog-en-cluster.md), [ADR-022](docs/adr/ADR-022-llegada-de-archivos.md) |
 
 El workspace del curso otorga privilegios al grupo `mine-group9` en un único esquema. Los prefijos distinguen capas y los permisos para el Job y el tablero se asignan por recurso. El [ADR-019](docs/adr/ADR-019-computo-y-almacenamiento-institucional.md) detalla el estado de los roles y los permisos que requiere separar capas en esquemas físicos.
+
+### Incorporar un archivo nuevo
+
+En **Catalog → clase10 → equipo9 → checkpoints**, abra `oceanwatch_equipo9/landing/inbox` y cargue un archivo en esa carpeta. Use el nombre de NOAA `AIS_AAAA_MM_DD.zip` o su equivalente `.csv`. Para un lote adicional del mismo día use un sufijo, por ejemplo `AIS_2023_06_10_parte2.csv`. Cada nombre identifica una entrega inmutable.
+
+El trigger **File arrival** está desplegado y pausado. El rol de almacenamiento institucional necesita permisos para aprovisionar eventos de archivos en AWS. Durante el bloqueo, la carga desde Catalog se completa con **Run now** y `fecha_proceso` vacía. En Windows, el script carga y lanza el Job en un comando.
+
+```powershell
+.\tools\subir_ais.ps1 -Archivo 'C:\Descargas\AIS_2023_06_10.zip' -Perfil oceanwatch
+```
+
+El DAG toma las fechas de los nombres, incorpora los archivos a bronce mediante Auto Loader y reconstruye plata, oro y las anomalías de los días afectados con el campeón vigente. El tablero abre en la última fecha disponible en oro. [Operación y activación del trigger](docs/runbook.md).
 
 ### Reproducir
 
@@ -36,7 +49,7 @@ databricks bundle run oceanwatch_pipeline_entrega2 --params fecha_proceso=2023-0
 databricks bundle run oceanwatch_verificacion --params fecha_proceso=2023-06-08
 ```
 
-La primera corrida incluye las fechas 1, 2 y 3 para construir el train y la validación temporal. Un backfill posterior al train solo requiere `fecha_proceso` y reutiliza el campeón. El 8 de junio amplía el corpus de la Parte 1. El calendario corre un replay histórico. El repositorio excluye tokens, perfiles de autenticación y archivos `*.key`.
+La primera corrida incluye las fechas 1, 2 y 3 para construir el train y la validación temporal. Un backfill posterior al train solo requiere `fecha_proceso` y reutiliza el campeón. El repositorio excluye tokens, perfiles de autenticación y archivos `*.key`.
 
 ### Fuentes
 

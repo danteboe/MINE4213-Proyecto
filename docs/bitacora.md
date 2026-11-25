@@ -17,6 +17,13 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 
 ## Entradas
 
+### 2026-11-25 · Incorporación desde el volumen y corrección del tablero
+
+- Se separó la carpeta de recepción del staging de Auto Loader. El manifiesto transmite las fechas de trabajo y la tarea de ML confirma las entradas.
+- File arrival reemplazó al cron pausado. La prueba falló antes de lanzar cómputo por un permiso del rol de almacenamiento institucional en AWS. La definición quedó en pausa y se documentó cómo reactivarla.
+- Se procesó el ZIP del 9 de junio cargado en el volumen mediante una corrida con fecha vacía. El tablero se republicó y se validaron los mapas, las tablas, el ranking y el filtro en el navegador institucional.
+- Se documentaron el diseño y los resultados observados. [ADR-022](adr/ADR-022-llegada-de-archivos.md) · [Evidencia](../evidence/institucional/llegada_archivos.md).
+
 ### 2026-11-20 · Migración institucional a cómputo clásico
 
 - Se autenticó la CLI contra el workspace del curso y se desplegó el bundle en el clúster personal dedicado de Juan David. El esquema `clase14.equipo9` y el volumen `clase10.equipo9.checkpoints` se seleccionaron a partir de los permisos efectivos del equipo.

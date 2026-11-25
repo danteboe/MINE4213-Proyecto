@@ -6,20 +6,22 @@
       "queryLines": [
         "SELECT celda_lat, celda_lon, intensidad, buques\n",
         "FROM clase14.equipo9.oceanwatch_gold_matriz_trafico_diaria\n",
-        "WHERE dia = :fecha\n",
+        "WHERE dia = coalesce(try_cast(:fecha AS DATE), (SELECT max(dia) FROM clase14.equipo9.oceanwatch_gold_trayectorias_diarias))\n",
         "ORDER BY intensidad DESC, celda_lat, celda_lon\n",
         "LIMIT 2000"
       ],
       "parameters": [
         {
-          "displayName": "fecha",
+          "displayName": "Fecha UTC",
           "keyword": "fecha",
-          "dataType": "DATE",
+          "dataType": "STRING",
           "defaultSelection": {
             "values": {
-              "dataType": "DATE",
+              "dataType": "STRING",
               "values": [
-                { "value": "2023-06-08" }
+                {
+                  "value": "Última fecha"
+                }
               ]
             }
           }
@@ -34,21 +36,23 @@
         "       COUNT(DISTINCT MMSI)        AS buques_distintos,\n",
         "       SUM(n_posiciones_en_puerto) AS posiciones_ais\n",
         "FROM clase14.equipo9.oceanwatch_gold_presencia_puertos\n",
-        "WHERE dia = :fecha\n",
+        "WHERE dia = coalesce(try_cast(:fecha AS DATE), (SELECT max(dia) FROM clase14.equipo9.oceanwatch_gold_trayectorias_diarias))\n",
         "GROUP BY INDEX_NO, PORT_NAME, COUNTRY\n",
         "ORDER BY buques_distintos DESC, INDEX_NO\n",
         "LIMIT 15"
       ],
       "parameters": [
         {
-          "displayName": "fecha",
+          "displayName": "Fecha UTC",
           "keyword": "fecha",
-          "dataType": "DATE",
+          "dataType": "STRING",
           "defaultSelection": {
             "values": {
-              "dataType": "DATE",
+              "dataType": "STRING",
               "values": [
-                { "value": "2023-06-08" }
+                {
+                  "value": "Última fecha"
+                }
               ]
             }
           }
@@ -63,20 +67,22 @@
         "       n_posiciones_en_puerto,\n",
         "       primera_posicion, ultima_posicion\n",
         "FROM clase14.equipo9.oceanwatch_gold_presencia_puertos\n",
-        "WHERE dia = :fecha\n",
+        "WHERE dia = coalesce(try_cast(:fecha AS DATE), (SELECT max(dia) FROM clase14.equipo9.oceanwatch_gold_trayectorias_diarias))\n",
         "ORDER BY n_posiciones_en_puerto DESC, MMSI, INDEX_NO\n",
         "LIMIT 500"
       ],
       "parameters": [
         {
-          "displayName": "fecha",
+          "displayName": "Fecha UTC",
           "keyword": "fecha",
-          "dataType": "DATE",
+          "dataType": "STRING",
           "defaultSelection": {
             "values": {
-              "dataType": "DATE",
+              "dataType": "STRING",
               "values": [
-                { "value": "2023-06-08" }
+                {
+                  "value": "Última fecha"
+                }
               ]
             }
           }
@@ -90,20 +96,22 @@
         "SELECT MMSI, BaseDateTime, LAT, LON, SOG, VesselType,\n",
         "       z_sog, score_anomalia, razon\n",
         "FROM clase14.equipo9.oceanwatch_gold_anomalias_velocidad\n",
-        "WHERE _batch_date = :fecha AND es_anomalia = true\n",
+        "WHERE _batch_date = coalesce(try_cast(:fecha AS DATE), (SELECT max(dia) FROM clase14.equipo9.oceanwatch_gold_trayectorias_diarias)) AND es_anomalia = true\n",
         "ORDER BY score_anomalia ASC, MMSI, BaseDateTime\n",
         "LIMIT 500"
       ],
       "parameters": [
         {
-          "displayName": "fecha",
+          "displayName": "Fecha UTC",
           "keyword": "fecha",
-          "dataType": "DATE",
+          "dataType": "STRING",
           "defaultSelection": {
             "values": {
-              "dataType": "DATE",
+              "dataType": "STRING",
               "values": [
-                { "value": "2023-06-08" }
+                {
+                  "value": "Última fecha"
+                }
               ]
             }
           }
@@ -119,9 +127,14 @@
         {
           "widget": {
             "name": "titulo",
-            "textbox_spec": "# OceanWatch · Tráfico marítimo\nSeleccione una fecha UTC. El mapa muestra las 2.000 celdas con más posiciones AIS. Consulte las anomalías para las fechas puntuadas por el modelo."
+            "textbox_spec": "# OceanWatch · Tráfico marítimo\nLa vista inicial muestra la última fecha disponible en oro. Para consultar otro día, escribe una fecha UTC en formato AAAA-MM-DD. El mapa muestra las 2.000 celdas con más posiciones."
           },
-          "position": { "x": 0, "y": 0, "width": 6, "height": 2 }
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          }
         },
         {
           "widget": {
@@ -131,7 +144,12 @@
                 "name": "parameter_dashboards/ds_matriz_diaria/fecha",
                 "query": {
                   "datasetName": "ds_matriz_diaria",
-                  "parameters": [ { "name": "fecha", "keyword": "fecha" } ],
+                  "parameters": [
+                    {
+                      "name": "fecha",
+                      "keyword": "fecha"
+                    }
+                  ],
                   "disaggregated": false
                 }
               },
@@ -139,7 +157,12 @@
                 "name": "parameter_dashboards/ds_ranking_puertos/fecha",
                 "query": {
                   "datasetName": "ds_ranking_puertos",
-                  "parameters": [ { "name": "fecha", "keyword": "fecha" } ],
+                  "parameters": [
+                    {
+                      "name": "fecha",
+                      "keyword": "fecha"
+                    }
+                  ],
                   "disaggregated": false
                 }
               },
@@ -147,7 +170,12 @@
                 "name": "parameter_dashboards/ds_buques_puerto/fecha",
                 "query": {
                   "datasetName": "ds_buques_puerto",
-                  "parameters": [ { "name": "fecha", "keyword": "fecha" } ],
+                  "parameters": [
+                    {
+                      "name": "fecha",
+                      "keyword": "fecha"
+                    }
+                  ],
                   "disaggregated": false
                 }
               },
@@ -155,26 +183,52 @@
                 "name": "parameter_dashboards/ds_anomalias/fecha",
                 "query": {
                   "datasetName": "ds_anomalias",
-                  "parameters": [ { "name": "fecha", "keyword": "fecha" } ],
+                  "parameters": [
+                    {
+                      "name": "fecha",
+                      "keyword": "fecha"
+                    }
+                  ],
                   "disaggregated": false
                 }
               }
             ],
             "spec": {
               "version": 2,
-              "widgetType": "filter-single-select",
+              "widgetType": "filter-text-entry",
               "encodings": {
                 "fields": [
-                  { "parameterName": "fecha", "queryName": "parameter_dashboards/ds_matriz_diaria/fecha" },
-                  { "parameterName": "fecha", "queryName": "parameter_dashboards/ds_ranking_puertos/fecha" },
-                  { "parameterName": "fecha", "queryName": "parameter_dashboards/ds_buques_puerto/fecha" },
-                  { "parameterName": "fecha", "queryName": "parameter_dashboards/ds_anomalias/fecha" }
+                  {
+                    "parameterName": "fecha",
+                    "queryName": "parameter_dashboards/ds_matriz_diaria/fecha"
+                  },
+                  {
+                    "parameterName": "fecha",
+                    "queryName": "parameter_dashboards/ds_ranking_puertos/fecha"
+                  },
+                  {
+                    "parameterName": "fecha",
+                    "queryName": "parameter_dashboards/ds_buques_puerto/fecha"
+                  },
+                  {
+                    "parameterName": "fecha",
+                    "queryName": "parameter_dashboards/ds_anomalias/fecha"
+                  }
                 ]
               },
-              "frame": { "title": "Fecha analizada", "showTitle": true }
+              "frame": {
+                "title": "Fecha UTC",
+                "showTitle": true
+              },
+              "matchMode": "exact-match"
             }
           },
-          "position": { "x": 0, "y": 2, "width": 2, "height": 1 }
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
         },
         {
           "widget": {
@@ -185,39 +239,59 @@
                 "query": {
                   "datasetName": "ds_matriz_diaria",
                   "fields": [
-                    { "name": "celda_lat", "expression": "`celda_lat`" },
-                    { "name": "celda_lon", "expression": "`celda_lon`" },
-                    { "name": "intensidad", "expression": "`intensidad`" },
-                    { "name": "buques", "expression": "`buques`" }
+                    {
+                      "name": "celda_lat",
+                      "expression": "`celda_lat`"
+                    },
+                    {
+                      "name": "celda_lon",
+                      "expression": "`celda_lon`"
+                    },
+                    {
+                      "name": "intensidad",
+                      "expression": "`intensidad`"
+                    },
+                    {
+                      "name": "buques",
+                      "expression": "`buques`"
+                    }
                   ],
                   "disaggregated": true
                 }
               }
             ],
             "spec": {
-              "version": 3,
+              "version": 2,
               "widgetType": "symbol-map",
               "encodings": {
                 "coordinates": {
-                  "latitude": { "fieldName": "celda_lat", "displayName": "celda_lat" },
-                  "longitude": { "fieldName": "celda_lon", "displayName": "celda_lon" }
+                  "latitude": {
+                    "fieldName": "celda_lat"
+                  },
+                  "longitude": {
+                    "fieldName": "celda_lon"
+                  }
                 },
-                "color": {
+                "size": {
                   "fieldName": "intensidad",
-                  "scale": { "type": "quantitative" },
-                  "displayName": "intensidad"
-                },
-                "extra": [
-                  { "fieldName": "buques", "displayName": "Buque-horas" }
-                ]
+                  "displayName": "Posiciones AIS",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
               },
               "frame": {
-                "title": "V1 - Mapa de intensidad de trafico por celda (gold.matriz_trafico_diaria)",
+                "title": "Intensidad por celda",
                 "showTitle": true
               }
             }
           },
-          "position": { "x": 0, "y": 3, "width": 6, "height": 6 }
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 6
+          }
         },
         {
           "widget": {
@@ -228,10 +302,22 @@
                 "query": {
                   "datasetName": "ds_ranking_puertos",
                   "fields": [
-                    { "name": "PORT_NAME", "expression": "`PORT_NAME`" },
-                    { "name": "COUNTRY", "expression": "`COUNTRY`" },
-                    { "name": "buques_distintos", "expression": "`buques_distintos`" },
-                    { "name": "posiciones_ais", "expression": "`posiciones_ais`" }
+                    {
+                      "name": "PORT_NAME",
+                      "expression": "`PORT_NAME`"
+                    },
+                    {
+                      "name": "COUNTRY",
+                      "expression": "`COUNTRY`"
+                    },
+                    {
+                      "name": "buques_distintos",
+                      "expression": "`buques_distintos`"
+                    },
+                    {
+                      "name": "posiciones_ais",
+                      "expression": "`posiciones_ais`"
+                    }
                   ],
                   "disaggregated": true
                 }
@@ -243,30 +329,31 @@
               "encodings": {
                 "x": {
                   "fieldName": "buques_distintos",
-                  "scale": { "type": "quantitative" },
+                  "scale": {
+                    "type": "quantitative"
+                  },
                   "displayName": "Buques distintos"
                 },
                 "y": {
                   "fieldName": "PORT_NAME",
-                  "scale": { "type": "categorical" },
+                  "scale": {
+                    "type": "categorical"
+                  },
                   "displayName": "Puerto"
-                },
-                "color": {
-                  "fieldName": "COUNTRY",
-                  "scale": { "type": "categorical" },
-                  "displayName": "Pais"
-                },
-                "extra": [
-                  { "fieldName": "posiciones_ais", "displayName": "Posiciones AIS" }
-                ]
+                }
               },
               "frame": {
-                "title": "V2 - Ranking de puertos por buques distintos (gold.presencia_puertos)",
+                "title": "Puertos con más buques",
                 "showTitle": true
               }
             }
           },
-          "position": { "x": 0, "y": 9, "width": 3, "height": 6 }
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 3,
+            "height": 6
+          }
         },
         {
           "widget": {
@@ -277,12 +364,30 @@
                 "query": {
                   "datasetName": "ds_buques_puerto",
                   "fields": [
-                    { "name": "MMSI", "expression": "`MMSI`" },
-                    { "name": "PORT_NAME", "expression": "`PORT_NAME`" },
-                    { "name": "COUNTRY", "expression": "`COUNTRY`" },
-                    { "name": "n_posiciones_en_puerto", "expression": "`n_posiciones_en_puerto`" },
-                    { "name": "primera_posicion", "expression": "`primera_posicion`" },
-                    { "name": "ultima_posicion", "expression": "`ultima_posicion`" }
+                    {
+                      "name": "MMSI",
+                      "expression": "`MMSI`"
+                    },
+                    {
+                      "name": "PORT_NAME",
+                      "expression": "`PORT_NAME`"
+                    },
+                    {
+                      "name": "COUNTRY",
+                      "expression": "`COUNTRY`"
+                    },
+                    {
+                      "name": "n_posiciones_en_puerto",
+                      "expression": "`n_posiciones_en_puerto`"
+                    },
+                    {
+                      "name": "primera_posicion",
+                      "expression": "`primera_posicion`"
+                    },
+                    {
+                      "name": "ultima_posicion",
+                      "expression": "`ultima_posicion`"
+                    }
                   ],
                   "disaggregated": true
                 }
@@ -293,21 +398,111 @@
               "widgetType": "table",
               "encodings": {
                 "columns": [
-                  { "fieldName": "MMSI", "displayName": "MMSI", "booleanValues": ["false", "true"], "type": "integer" },
-                  { "fieldName": "PORT_NAME", "displayName": "Puerto", "type": "string" },
-                  { "fieldName": "COUNTRY", "displayName": "Pais", "type": "string" },
-                  { "fieldName": "n_posiciones_en_puerto", "displayName": "Posiciones en puerto", "type": "integer" },
-                  { "fieldName": "primera_posicion", "displayName": "Primera posicion", "type": "datetime" },
-                  { "fieldName": "ultima_posicion", "displayName": "Ultima posicion", "type": "datetime" }
+                  {
+                    "fieldName": "MMSI",
+                    "displayName": "MMSI",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "type": "integer",
+                    "title": "MMSI",
+                    "order": 0,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "number",
+                    "numberFormat": "0"
+                  },
+                  {
+                    "fieldName": "PORT_NAME",
+                    "displayName": "Puerto",
+                    "type": "string",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "Puerto",
+                    "order": 1,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "string"
+                  },
+                  {
+                    "fieldName": "COUNTRY",
+                    "displayName": "Pais",
+                    "type": "string",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "País",
+                    "order": 2,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "string"
+                  },
+                  {
+                    "fieldName": "n_posiciones_en_puerto",
+                    "displayName": "Posiciones en puerto",
+                    "type": "integer",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "Posiciones en puerto",
+                    "order": 3,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "number"
+                  },
+                  {
+                    "fieldName": "primera_posicion",
+                    "displayName": "Primera posicion",
+                    "type": "datetime",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "Primera posición",
+                    "order": 4,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "datetime"
+                  },
+                  {
+                    "fieldName": "ultima_posicion",
+                    "displayName": "Ultima posicion",
+                    "type": "datetime",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "Ultima posición",
+                    "order": 5,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "datetime"
+                  }
                 ]
               },
               "frame": {
-                "title": "V3 - Buques en puerto en la fecha (gold.presencia_puertos)",
+                "title": "Buques en puerto",
                 "showTitle": true
-              }
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "condensed": true,
+              "paginationSize": "default",
+              "itemsPerPage": 20,
+              "withRowNumber": false
             }
           },
-          "position": { "x": 3, "y": 9, "width": 3, "height": 6 }
+          "position": {
+            "x": 3,
+            "y": 9,
+            "width": 3,
+            "height": 6
+          }
         },
         {
           "widget": {
@@ -318,15 +513,42 @@
                 "query": {
                   "datasetName": "ds_anomalias",
                   "fields": [
-                    { "name": "MMSI", "expression": "`MMSI`" },
-                    { "name": "BaseDateTime", "expression": "`BaseDateTime`" },
-                    { "name": "LAT", "expression": "`LAT`" },
-                    { "name": "LON", "expression": "`LON`" },
-                    { "name": "SOG", "expression": "`SOG`" },
-                    { "name": "VesselType", "expression": "`VesselType`" },
-                    { "name": "z_sog", "expression": "`z_sog`" },
-                    { "name": "score_anomalia", "expression": "`score_anomalia`" },
-                    { "name": "razon", "expression": "`razon`" }
+                    {
+                      "name": "MMSI",
+                      "expression": "`MMSI`"
+                    },
+                    {
+                      "name": "BaseDateTime",
+                      "expression": "`BaseDateTime`"
+                    },
+                    {
+                      "name": "LAT",
+                      "expression": "`LAT`"
+                    },
+                    {
+                      "name": "LON",
+                      "expression": "`LON`"
+                    },
+                    {
+                      "name": "SOG",
+                      "expression": "`SOG`"
+                    },
+                    {
+                      "name": "VesselType",
+                      "expression": "`VesselType`"
+                    },
+                    {
+                      "name": "z_sog",
+                      "expression": "`z_sog`"
+                    },
+                    {
+                      "name": "score_anomalia",
+                      "expression": "`score_anomalia`"
+                    },
+                    {
+                      "name": "razon",
+                      "expression": "`razon`"
+                    }
                   ],
                   "disaggregated": true
                 }
@@ -337,24 +559,153 @@
               "widgetType": "table",
               "encodings": {
                 "columns": [
-                  { "fieldName": "MMSI", "displayName": "MMSI", "type": "integer" },
-                  { "fieldName": "BaseDateTime", "displayName": "Instante", "type": "datetime" },
-                  { "fieldName": "LAT", "displayName": "LAT", "type": "float" },
-                  { "fieldName": "LON", "displayName": "LON", "type": "float" },
-                  { "fieldName": "SOG", "displayName": "SOG (kn)", "type": "float" },
-                  { "fieldName": "VesselType", "displayName": "Tipo buque", "type": "integer" },
-                  { "fieldName": "z_sog", "displayName": "z_sog", "type": "float" },
-                  { "fieldName": "score_anomalia", "displayName": "Score", "type": "float" },
-                  { "fieldName": "razon", "displayName": "Razon", "type": "string" }
+                  {
+                    "fieldName": "MMSI",
+                    "displayName": "MMSI",
+                    "type": "integer",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "MMSI",
+                    "order": 0,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "number",
+                    "numberFormat": "0"
+                  },
+                  {
+                    "fieldName": "BaseDateTime",
+                    "displayName": "Instante",
+                    "type": "datetime",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "Instante",
+                    "order": 1,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "datetime"
+                  },
+                  {
+                    "fieldName": "LAT",
+                    "displayName": "LAT",
+                    "type": "float",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "LAT",
+                    "order": 2,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "number"
+                  },
+                  {
+                    "fieldName": "LON",
+                    "displayName": "LON",
+                    "type": "float",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "LON",
+                    "order": 3,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "number"
+                  },
+                  {
+                    "fieldName": "SOG",
+                    "displayName": "SOG (kn)",
+                    "type": "float",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "SOG (kn)",
+                    "order": 4,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "number"
+                  },
+                  {
+                    "fieldName": "VesselType",
+                    "displayName": "Tipo buque",
+                    "type": "integer",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "Tipo buque",
+                    "order": 5,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "number"
+                  },
+                  {
+                    "fieldName": "z_sog",
+                    "displayName": "z_sog",
+                    "type": "float",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "z_sog",
+                    "order": 6,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "number"
+                  },
+                  {
+                    "fieldName": "score_anomalia",
+                    "displayName": "Score",
+                    "type": "float",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "Score",
+                    "order": 7,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "number"
+                  },
+                  {
+                    "fieldName": "razon",
+                    "displayName": "Razon",
+                    "type": "string",
+                    "booleanValues": [
+                      "false",
+                      "true"
+                    ],
+                    "title": "Razón",
+                    "order": 8,
+                    "visible": true,
+                    "allowHTML": false,
+                    "displayAs": "string"
+                  }
                 ]
               },
               "frame": {
-                "title": "V4 - Anomalias del dia (gold.anomalias_velocidad, es_anomalia=true)",
+                "title": "Anomalías de velocidad",
                 "showTitle": true
-              }
+              },
+              "invisibleColumns": [],
+              "allowHTMLByDefault": false,
+              "condensed": true,
+              "paginationSize": "default",
+              "itemsPerPage": 20,
+              "withRowNumber": false
             }
           },
-          "position": { "x": 0, "y": 15, "width": 3, "height": 6 }
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 3,
+            "height": 6
+          }
         },
         {
           "widget": {
@@ -365,41 +716,55 @@
                 "query": {
                   "datasetName": "ds_anomalias",
                   "fields": [
-                    { "name": "LAT", "expression": "`LAT`" },
-                    { "name": "LON", "expression": "`LON`" },
-                    { "name": "z_sog", "expression": "`z_sog`" },
-                    { "name": "MMSI", "expression": "`MMSI`" }
+                    {
+                      "name": "LAT",
+                      "expression": "`LAT`"
+                    },
+                    {
+                      "name": "LON",
+                      "expression": "`LON`"
+                    },
+                    {
+                      "name": "z_sog",
+                      "expression": "`z_sog`"
+                    },
+                    {
+                      "name": "MMSI",
+                      "expression": "`MMSI`"
+                    }
                   ],
                   "disaggregated": true
                 }
               }
             ],
             "spec": {
-              "version": 3,
+              "version": 2,
               "widgetType": "symbol-map",
               "encodings": {
                 "coordinates": {
-                  "latitude": { "fieldName": "LAT", "displayName": "LAT" },
-                  "longitude": { "fieldName": "LON", "displayName": "LON" }
-                },
-                "color": {
-                  "fieldName": "z_sog",
-                  "scale": { "type": "quantitative" },
-                  "displayName": "z_sog"
-                },
-                "extra": [
-                  { "fieldName": "MMSI", "displayName": "MMSI" }
-                ]
+                  "latitude": {
+                    "fieldName": "LAT"
+                  },
+                  "longitude": {
+                    "fieldName": "LON"
+                  }
+                }
               },
               "frame": {
-                "title": "V4 - Mapa de posiciones anomalas (color = z_sog)",
+                "title": "Posiciones con anomalías de velocidad",
                 "showTitle": true
               }
             }
           },
-          "position": { "x": 3, "y": 15, "width": 3, "height": 6 }
+          "position": {
+            "x": 3,
+            "y": 15,
+            "width": 3,
+            "height": 6
+          }
         }
-      ]
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
     }
   ]
 }

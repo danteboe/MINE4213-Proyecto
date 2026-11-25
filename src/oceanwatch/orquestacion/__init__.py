@@ -74,7 +74,7 @@ def fila_auditoria(
     job_run_id: int,
     job_id: int,
     task_key: str,
-    fecha_proceso: str,
+    fecha_proceso: Optional[str],
     estado: str,
     ts_inicio: str,
     ts_fin: str,
@@ -91,7 +91,7 @@ def fila_auditoria(
         job_run_id: id de la corrida del Job ({{job.run_id}}).
         job_id: id del Job ({{job.id}}).
         task_key: nombre de la tarea ({{task.name}}): ingesta/plata_calidad/conciliacion/oro.
-        fecha_proceso: parámetro de la corrida (validado por :func:`validar_fecha_proceso`).
+        fecha_proceso: Fecha ISO o None cuando la corrida aún no ha identificado un día.
         estado: estado de la tarea (p. ej. ``SUCCESS``, ``FAILED``).
         ts_inicio: timestamp ISO de inicio de la tarea.
         ts_fin: timestamp ISO de fin de la tarea.
@@ -107,12 +107,13 @@ def fila_auditoria(
         raise TypeError("job_id debe ser int.")
     if not task_key:
         raise ValueError("task_key no puede estar vacío.")
-    validar_fecha_proceso(fecha_proceso)
+    if fecha_proceso is not None:
+        validar_fecha_proceso(fecha_proceso)
     return {
         "job_run_id": int(job_run_id),
         "job_id": int(job_id),
         "task_key": str(task_key),
-        "fecha_proceso": str(fecha_proceso),
+        "fecha_proceso": fecha_proceso,
         "estado": str(estado),
         "trigger": "",  # lo completa el notebook (manual vs scheduled); vacío por defecto.
         "ts_inicio": str(ts_inicio),

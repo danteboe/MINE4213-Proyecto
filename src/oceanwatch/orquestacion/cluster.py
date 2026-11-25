@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import csv
 import hashlib
-import shutil
+import json
 import tempfile
-import zipfile
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -14,7 +13,8 @@ from pyspark.sql import functions as F
 
 from oceanwatch.common.config import default_config_path, fqn
 from oceanwatch.ingest import autoloader, download, paths
-from oceanwatch.ingest.schema import ais_struct_type
+from oceanwatch.ingest.entradas import extraer_csv, fecha_archivo, validar_csv
+from oceanwatch.ingest.schema import ais_struct_type, columnas_ais
 from oceanwatch.orquestacion import fila_auditoria, tabla_auditoria_fqn, validar_fecha_proceso
 
 
@@ -34,6 +34,18 @@ def dias_corrida(cfg, fecha, entrenar, desde=""):
     if not max(ml["train_dates"]) < ml["validation_date"] <= fecha:
         raise ValueError("La fecha debe ser igual o posterior a validation_date")
     return sorted(set([*ml["train_dates"], ml["validation_date"], *solicitados]))
+
+
+def _registro_landing(cfg, carpeta):
+    return Path(cfg["ruta_volumen"], "control_landing", carpeta)
+
+
+def ruta_entrada(cfg):
+    return cfg.get("ruta_entrada") or f"{cfg['ruta_volumen']}/landing/inbox"
+
+
+def manifiesto_corrida(cfg, job_run_id):
+    return _registro_landing(cfg, "corridas") / f"{job_run_id}.json"
 
 
 def dia_col(spark, tabla, fecha, columna="_batch_date"):
@@ -92,7 +104,16 @@ def preparar(spark, dbutils, cfg):
         ).coalesce(1).write.format("delta").mode("error").saveAsTable(wpi)
         spark.sql(f"COMMENT ON TABLE {wpi} IS 'World Port Index, referencia NGA proyectada.'")
     dbutils.fs.mkdirs(paths.landing_csv_root(cfg))
+    dbutils.fs.mkdirs(ruta_entrada(cfg))
+    for carpeta in ("confirmados", "corridas"):
+        dbutils.fs.mkdirs(str(_registro_landing(cfg, carpeta)))
     return {"bronze": tabla, "puertos": wpi}
+
+
+def _copiar_csv(dbutils, fuente, destino):
+    dbutils.fs.mkdirs(str(destino.parent))
+    if not dbutils.fs.cp(fuente, str(destino)):
+        raise OSError(f"No se publicó {destino}")
 
 
 def publicar_csv(dbutils, cfg, fecha):
@@ -107,30 +128,81 @@ def publicar_csv(dbutils, cfg, fecha):
         download.descargar_zip(paths.url_zip_noaa(cfg, fecha), str(zip_path))
         with zip_path.open("rb") as archivo:
             sha256 = hashlib.file_digest(archivo, "sha256").hexdigest()
-        with zipfile.ZipFile(zip_path) as archive:
-            archivos = [i for i in archive.infolist() if not i.is_dir() and i.filename.lower().endswith(".csv")]
-            if len(archivos) != 1 or archivos[0].file_size == 0:
-                raise ValueError(f"Se esperaba un CSV no vacío para {fecha}")
-            # zipfile comprueba el CRC al leer el miembro hasta EOF.
-            with archive.open(archivos[0]) as source, csv_path.open("wb") as output:
-                shutil.copyfileobj(source, output, 1 << 20)
-        dbutils.fs.mkdirs(str(destino.parent))
-        if not dbutils.fs.cp(csv_path.as_uri(), str(destino)):
-            raise OSError(f"No se publicó {destino}")
+        extraer_csv(zip_path, csv_path)
+        validar_csv(csv_path, columnas_ais(cfg))
+        _copiar_csv(dbutils, csv_path.as_uri(), destino)
         if destino.stat().st_size != csv_path.stat().st_size:
             dbutils.fs.rm(str(destino))
             raise OSError(f"CSV incompleto para {fecha}")
         return {"zip_sha256": sha256, "csv_bytes": csv_path.stat().st_size, "reutilizado": False}
 
 
-def ingerir(spark, dbutils, cfg, fechas):
-    archivos = {fecha: publicar_csv(dbutils, cfg, fecha) for fecha in fechas}
+def _sha256(ruta):
+    with ruta.open("rb") as archivo:
+        return hashlib.file_digest(archivo, "sha256").digest()
+
+
+def _publicar_entrada(dbutils, cfg, entrada, fecha):
+    destino = Path(paths.landing_csv_dir(cfg, fecha), entrada.stem + ".csv")
+    with tempfile.TemporaryDirectory(prefix="oceanwatch-entrada-") as tmp:
+        fuente = entrada
+        if entrada.suffix == ".zip":
+            fuente = Path(tmp, destino.name)
+            extraer_csv(entrada, fuente)
+        validar_csv(fuente, columnas_ais(cfg))
+        tamano = fuente.stat().st_size
+        if destino.exists():
+            if destino.stat().st_size != tamano or _sha256(destino) != _sha256(fuente):
+                raise ValueError(f"Ya existe otro contenido en {destino.name}. Use un sufijo nuevo para un lote adicional.")
+            return
+        ubicacion = str(fuente) if fuente == entrada else fuente.as_uri()
+        _copiar_csv(dbutils, ubicacion, destino)
+        if destino.stat().st_size != tamano:
+            dbutils.fs.rm(str(destino))
+            raise OSError(f"CSV publicado incompleto: {destino.name}")
+
+
+def confirmar_entradas(dbutils, cfg, lote):
+    """La recepción se cierra solo después de publicar oro e inferencia."""
+    for nombre in lote["entradas"]:
+        marca = _registro_landing(cfg, "confirmados") / nombre
+        if not dbutils.fs.put(str(marca), "publicado\n", True):
+            raise OSError(f"No se pudo confirmar {nombre}")
+
+
+def ingerir(spark, dbutils, cfg, fecha, desde, entrenar, job_run_id):
+    if not fecha and (desde or entrenar != "false"):
+        raise ValueError("fecha_inicio y entrenar requieren fecha_proceso explícita")
+    solicitadas = dias_corrida(cfg, fecha, entrenar, desde) if fecha else []
+    confirmados = {i.name for i in dbutils.fs.ls(str(_registro_landing(cfg, "confirmados")))}
+    inbox = ruta_entrada(cfg)
+    entradas = {
+        i.name: fecha_archivo(i.name)
+        for i in sorted(dbutils.fs.ls(inbox), key=lambda info: info.name)
+        if i.name.endswith((".zip", ".csv")) and i.name not in confirmados
+    }
+    for nombre, dia in entradas.items():
+        _publicar_entrada(dbutils, cfg, Path(inbox, nombre), dia)
+    dias_entrada = set(entradas.values())
+    archivos = {dia: publicar_csv(dbutils, cfg, dia) for dia in solicitadas}
+    fechas = sorted(dias_entrada.union(solicitadas))
+    lote = {
+        "fechas": fechas,
+        "fechas_ml": sorted(dias_entrada.union(dia for dia in solicitadas if dia >= (desde or fecha))),
+        "entradas": list(entradas),
+    }
+    manifiesto = manifiesto_corrida(cfg, job_run_id)
+    if not dbutils.fs.put(str(manifiesto), json.dumps(lote), True):
+        raise OSError(f"No se guardó el manifiesto de la corrida {job_run_id}")
+    if not fechas:
+        return {**lote, "filas_entrada": 0}
     query = autoloader.ejecutar_ingesta(spark, cfg)
     tabla = autoloader.tabla_bronze_fqn(cfg)
     for fecha in fechas:
         if not dia_col(spark, tabla, fecha).take(1):
             raise RuntimeError(f"El stream terminó sin publicar datos de {fecha}")
     return {
+        **lote,
         "archivos": archivos,
         "filas_entrada": sum(p["numInputRows"] for p in query.recentProgress),
         "query_id": str(query.id),
