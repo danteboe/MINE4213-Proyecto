@@ -8,7 +8,7 @@ version = "0.2.0"
 description = "OceanWatch Analytics — lakehouse Databricks para datos AIS de NOAA (Entrega 2)."
 requires-python = ">=3.12"
 # Las tareas usan PySpark del Databricks Runtime. El DAB declara sus librerías.
-dependencies = ["pyyaml"]
+dependencies = ["pyyaml", "pyzstd==0.20.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

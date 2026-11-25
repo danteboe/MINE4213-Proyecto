@@ -7,8 +7,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $fuente = Get-Item -LiteralPath $Archivo
-if ($fuente.PSIsContainer -or $fuente.Name -cnotmatch '^AIS_\d{4}_\d{2}_\d{2}(?:_[A-Za-z0-9-]{1,32})?\.(zip|csv)$') {
-    throw "Use un archivo AIS_AAAA_MM_DD.zip o .csv, con un sufijo opcional de lote."
+if ($fuente.PSIsContainer -or $fuente.Name -cnotmatch '^(ais-[0-9]{4}-[0-9]{2}-[0-9]{2}\.csv\.zst|AIS_[0-9]{4}_[0-9]{2}_[0-9]{2}(?:_[A-Za-z0-9-]{1,32})?\.(zip|csv))$') {
+    throw "Use ais-AAAA-MM-DD.csv.zst, AIS_AAAA_MM_DD.zip o AIS_AAAA_MM_DD.csv."
 }
 $comando = (Get-Command $Cli -CommandType Application).Source
 $autenticacion = @()
@@ -24,8 +24,7 @@ try {
     & $comando fs cp $fuente.FullName "dbfs:${inbox}/$($fuente.Name)" @autenticacion
     if ($LASTEXITCODE -ne 0) { throw "La carga falló. Se conservan los archivos que ya estaban en la carpeta." }
 
-    & $comando bundle run oceanwatch_pipeline_entrega2 --no-wait @autenticacion
-    if ($LASTEXITCODE -ne 0) { throw "El archivo está cargado. Use Run now para procesarlo." }
+    Write-Output "Archivo cargado. El detector de OceanWatch iniciará el pipeline."
 }
 finally {
     Pop-Location

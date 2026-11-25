@@ -12,10 +12,16 @@ variables:
     lookup:
       cluster: jd.torresa1@uniandes.edu.co's Personal Compute Cluster
   pause_status:
-    description: Estado del trigger por llegada de archivo
+    description: Estado del trigger nativo por llegada de archivo
     default: PAUSED
+  pausa_detector:
+    description: Estado del detector periódico cuando File arrival no está disponible
+    default: UNPAUSED
+  cron_detector:
+    description: Frecuencia de revisión de metadatos del volumen
+    default: "0 0/30 * * * ?"
   ruta_entrada:
-    description: Carpeta donde el equipo deposita ZIP y CSV AIS
+    description: Carpeta donde el equipo deposita CSV.ZST, ZIP y CSV AIS
     default: /Volumes/clase10/equipo9/checkpoints/oceanwatch_equipo9/landing/inbox/
   warehouse_id:
     description: SQL warehouse institucional usado por el tablero AI/BI

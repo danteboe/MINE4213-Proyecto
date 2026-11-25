@@ -17,6 +17,12 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 
 ## Entradas
 
+### 2026-11-25 · Recepción del formato moderno de NOAA
+
+- Se incorporó el archivo CSV2 Zstandard con su nombre original. El encabezado se convierte por nombre, con coordenadas en el orden de bronce y tiempo UTC en el formato del contrato.
+- Se habilitó un detector SQL con intervalo de 30 minutos por el bloqueo de eventos de almacenamiento. Se comprobó un tick sin archivos pendientes y un tick que lanzó el DAG clásico después de cargar el archivo del 29 de junio de 2026.
+- Se registraron las pruebas del detector, la corrida de negocio y el plan de lectura de metadatos. [ADR-022](adr/ADR-022-llegada-de-archivos.md) · [Evidencia](../evidence/institucional/llegada_archivos.md).
+
 ### 2026-11-25 · Incorporación desde el volumen y corrección del tablero
 
 - Se separó la carpeta de recepción del staging de Auto Loader. El manifiesto transmite las fechas de trabajo y la tarea de ML confirma las entradas.

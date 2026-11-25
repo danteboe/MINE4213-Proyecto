@@ -1,0 +1,38 @@
+resources:
+  jobs:
+    oceanwatch_detectar_archivos:
+      name: OceanWatch | Detectar archivos AIS | Equipo 9
+      description: Consulta solo nombres del volumen e inicia el pipeline clásico si hay entradas nuevas.
+      permissions:
+        - group_name: mine-group9
+          level: CAN_MANAGE_RUN
+      max_concurrent_runs: 1
+      queue:
+        enabled: false
+      schedule:
+        quartz_cron_expression: ${var.cron_detector}
+        timezone_id: UTC
+        pause_status: ${var.pausa_detector}
+      tasks:
+        - task_key: detectar
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ./detectar_entradas.sql
+            parameters:
+              ruta_entrada: ${var.ruta_entrada}
+              ruta_confirmados: /Volumes/clase10/equipo9/checkpoints/oceanwatch_equipo9/control_landing/confirmados/
+          timeout_seconds: 600
+        - task_key: hay_archivos
+          depends_on:
+            - task_key: detectar
+          condition_task:
+            op: GREATER_THAN
+            left: "{{tasks.detectar.output.first_row.pendientes}}"
+            right: "0"
+        - task_key: procesar
+          depends_on:
+            - task_key: hay_archivos
+              outcome: "true"
+          run_job_task:
+            job_id: ${resources.jobs.oceanwatch_pipeline_entrega2.id}

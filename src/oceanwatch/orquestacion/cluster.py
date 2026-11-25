@@ -13,7 +13,7 @@ from pyspark.sql import functions as F
 
 from oceanwatch.common.config import default_config_path, fqn
 from oceanwatch.ingest import autoloader, download, paths
-from oceanwatch.ingest.entradas import extraer_csv, fecha_archivo, validar_csv
+from oceanwatch.ingest.entradas import extraer_csv, fecha_archivo, normalizar_noaa_csv2, validar_csv
 from oceanwatch.ingest.schema import ais_struct_type, columnas_ais
 from oceanwatch.orquestacion import fila_auditoria, tabla_auditoria_fqn, validar_fecha_proceso
 
@@ -143,13 +143,19 @@ def _sha256(ruta):
 
 
 def _publicar_entrada(dbutils, cfg, entrada, fecha):
-    destino = Path(paths.landing_csv_dir(cfg, fecha), entrada.stem + ".csv")
+    es_zst = entrada.name.endswith(".csv.zst")
+    nombre_csv = entrada.stem if es_zst else entrada.stem + ".csv"
+    destino = Path(paths.landing_csv_dir(cfg, fecha), nombre_csv)
+    columnas = columnas_ais(cfg)
     with tempfile.TemporaryDirectory(prefix="oceanwatch-entrada-") as tmp:
         fuente = entrada
-        if entrada.suffix == ".zip":
+        if es_zst:
+            fuente = Path(tmp, destino.name)
+            normalizar_noaa_csv2(entrada, fuente, columnas)
+        elif entrada.suffix == ".zip":
             fuente = Path(tmp, destino.name)
             extraer_csv(entrada, fuente)
-        validar_csv(fuente, columnas_ais(cfg))
+        validar_csv(fuente, columnas)
         tamano = fuente.stat().st_size
         if destino.exists():
             if destino.stat().st_size != tamano or _sha256(destino) != _sha256(fuente):
@@ -179,7 +185,7 @@ def ingerir(spark, dbutils, cfg, fecha, desde, entrenar, job_run_id):
     entradas = {
         i.name: fecha_archivo(i.name)
         for i in sorted(dbutils.fs.ls(inbox), key=lambda info: info.name)
-        if i.name.endswith((".zip", ".csv")) and i.name not in confirmados
+        if i.name.endswith((".zip", ".csv", ".csv.zst")) and i.name not in confirmados
     }
     for nombre, dia in entradas.items():
         _publicar_entrada(dbutils, cfg, Path(inbox, nombre), dia)

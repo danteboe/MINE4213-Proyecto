@@ -1,6 +1,22 @@
 # Incorporación desde un volumen · 2026-11-25
 
-## Evaluación de File arrival
+## Automatización del CSV2 de NOAA
+
+Se subió desde el equipo local el archivo original `ais-2026-06-29.csv.zst` de **303.624.397 bytes** a la bandeja. El script de carga solo llamó a la copia de archivos. El [detector programado](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/342422518655466/runs/789140629150470) registró `PERIODIC`, devolvió `pendientes = 1` y abrió el [DAG en el clúster clásico](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/83886562675136/runs/796009776834361) con modo `RUN_JOB_TASK`. Se usó un intervalo de dos minutos para observar la prueba y luego se restauró el intervalo de producción de 30 minutos.
+
+En la [prueba sin entradas pendientes](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/342422518655466/runs/985669479541672), el detector excluyó `procesar`. La consulta con esquema explícito devolvió cero para directorios vacíos y uno para la bandeja con el Zstandard pendiente. Su plan físico devolvió `Scan binaryFile` con `ReadSchema: struct<path:string>` en ambas lecturas. La suite local registró 121 pruebas aprobadas y 1 omitida porque requiere PySpark. [Archivo original](https://noaaocm.blob.core.windows.net/ais/csv2/csv2026/ais-2026-06-29.csv.zst).
+
+La normalización local completa del archivo generó **10.139.168 registros** en un CSV de **1.011.174.688 bytes**, con los nombres y el orden del contrato de bronce. El SHA-256 del objeto original descargado fue `fd9b1fd608d7cf60d3c4575841e8f6ef6dd4aceae1c6ffe223394eb0d849f7ba`.
+
+En el clúster, Auto Loader incorporó **10.139.168 filas** con el mismo ID persistente de la carga inicial `740d3841-e1b0-4040-b730-c8fc0d536dc8`. SQL verificó el conteo en bronce, cero timestamps nulos, cero filas rescatadas y un intervalo UTC de 00:00:00 a 23:59:59 para el 29 de junio.
+
+| Bronce | Plata | Cuarentena | Duplicados válidos | Diferencia |
+|---:|---:|---:|---:|---:|
+| 10.139.168 | 9.805.091 | 332.462 | 1.615 | 0 |
+
+Las seis tareas terminaron en `SUCCESS` en 15 min 24 s. Oro publicó los cuatro productos y la inferencia registró **95.461 anomalías** con el campeón versión **1**. El archivo quedó confirmado en el volumen y la consulta del detector devolvió `pendientes = 0`. Las consultas del tablero con **Última fecha** devolvieron el 29 de junio de 2026, 2.000 celdas, 15 puertos y 500 filas por tabla.
+
+## Evaluación histórica de File arrival
 
 Se reemplazó el cron de las 06:00, que estaba pausado, por una definición de **File arrival** con 60 segundos de espera y 60 segundos mínimos entre disparos. La ubicación vigilada fue `/Volumes/clase10/equipo9/checkpoints/oceanwatch_equipo9/landing/inbox/` en el volumen del equipo. Se activó temporalmente el trigger y se cargó el archivo diario oficial `AIS_2023_06_09.zip` de **343.405.316 bytes**. [Archivo NOAA 2023](https://coast.noaa.gov/htdata/CMSP/AISDataHandler/2023/).
 

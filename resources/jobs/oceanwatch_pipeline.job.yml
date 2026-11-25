@@ -50,6 +50,9 @@ resources:
           depends_on:
             - task_key: preparar
           existing_cluster_id: ${var.cluster_id}
+          libraries:
+            - pypi:
+                package: pyzstd==0.20.0
           notebook_task:
             notebook_path: ../../notebooks/oceanwatch_cluster.py
             base_parameters:

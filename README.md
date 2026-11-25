@@ -28,15 +28,15 @@ El workspace del curso otorga privilegios al grupo `mine-group9` en un único es
 
 ### Incorporar un archivo nuevo
 
-En **Catalog → clase10 → equipo9 → checkpoints**, abra `oceanwatch_equipo9/landing/inbox` y cargue un archivo en esa carpeta. Use el nombre de NOAA `AIS_AAAA_MM_DD.zip` o su equivalente `.csv`. Para un lote adicional del mismo día use un sufijo, por ejemplo `AIS_2023_06_10_parte2.csv`. Cada nombre identifica una entrega inmutable.
+En **Catalog → clase10 → equipo9 → checkpoints**, abra `oceanwatch_equipo9/landing/inbox` y cargue el archivo de NOAA tal como lo descargó. Se admiten `ais-AAAA-MM-DD.csv.zst`, `AIS_AAAA_MM_DD.zip` y `AIS_AAAA_MM_DD.csv`. Para un lote adicional en el formato ZIP o CSV original use un sufijo, por ejemplo `AIS_2023_06_10_parte2.csv`. Cada nombre identifica una entrega inmutable.
 
-El trigger **File arrival** está desplegado y pausado. El rol de almacenamiento institucional necesita permisos para aprovisionar eventos de archivos en AWS. Durante el bloqueo, la carga desde Catalog se completa con **Run now** y `fecha_proceso` vacía. En Windows, el script carga y lanza el Job en un comando.
+Un detector automático consulta la bandeja cada **30 minutos**. Si encuentra archivos pendientes lanza el DAG completo en el clúster clásico. El detector usa el warehouse SQL existente para consultar nombres y confirmaciones. **File arrival** queda preparado para activarse cuando el administrador habilite los eventos de archivos en AWS. En Windows, el script también permite cargar el archivo.
 
 ```powershell
-.\tools\subir_ais.ps1 -Archivo 'C:\Descargas\AIS_2023_06_10.zip' -Perfil oceanwatch
+.\tools\subir_ais.ps1 -Archivo 'C:\Descargas\ais-2026-06-29.csv.zst' -Perfil oceanwatch
 ```
 
-El DAG toma las fechas de los nombres, incorpora los archivos a bronce mediante Auto Loader y reconstruye plata, oro y las anomalías de los días afectados con el campeón vigente. El tablero abre en la última fecha disponible en oro. [Operación y activación del trigger](docs/runbook.md).
+El DAG toma las fechas de los nombres, convierte los CSV2 comprimidos al esquema AIS y usa Auto Loader para incorporar los CSV a bronce. Reconstruye plata, oro y las anomalías de los días afectados con el campeón vigente. El tablero abre en la última fecha disponible en oro. [Operación y activación del trigger](docs/runbook.md).
 
 ### Reproducir
 
