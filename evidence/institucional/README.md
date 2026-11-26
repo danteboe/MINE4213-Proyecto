@@ -1,5 +1,7 @@
 # Evidencia institucional de la Entrega 2
 
+La [matriz](../../docs/traceability_matrix.md) asocia estos resultados con los ocho criterios del enunciado. La [prueba de carga automática](llegada_archivos.md) incluye el CSV2 de 2026, la consola actual y el estado del trigger. La [verificación de gobernanza](gobernanza.md) registra los grants, comentarios y linaje observados el 26 de noviembre.
+
 ## Recursos
 
 | Recurso | Resultado observado |
@@ -8,6 +10,7 @@
 | Despliegue | `databricks bundle validate --strict` y despliegue de Jobs, permisos y tablero en el workspace del curso. |
 | Job de negocio | [OceanWatch · Entrega 2](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/83886562675136), clúster `1114-165401-a0ye3pxs`. |
 | Job de verificación | [OceanWatch · Verificación](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/719836273900213). |
+| Job detector | [OceanWatch · Detectar archivos AIS](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/342422518655466), activo a la hora y a la media hora. |
 | Tablero | [Consola publicada](https://dbc-b38f0852-ecf9.cloud.databricks.com/dashboardsv3/01f1e5507d1b18a5963d1a49e4329629/published). La API de publicación devuelve `embed_credentials=false` y warehouse `4c751147a4c66a5e`. |
 
 ## Ingesta inicial

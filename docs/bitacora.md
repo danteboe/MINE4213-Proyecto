@@ -17,6 +17,12 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 
 ## Entradas
 
+### 2026-11-26 · Revisión contra el enunciado y preparación de entrega
+
+- Se cotejaron los ocho criterios y el bono opcional contra el PDF de la Parte 2, el código y los recursos institucionales. Se verificaron las corridas de carga, reanudación y poda, la consola publicada y el alias del modelo.
+- Se comprobó que hay once tablas Delta administradas y comentadas, que Unity Catalog registra el linaje principal y que los Jobs y el tablero tienen permisos propios. La separación efectiva por esquema y rol sigue dependiendo de la administración.
+- Se organizó la entrega desde el README y se añadió el directorio de recursos. Se actualizaron arquitectura, contrato, reglas, decisiones, operación y guion de sustentación. [Matriz](traceability_matrix.md) · [Directorio](directorio_recursos.md) · [Guía](guia_sustentacion.md).
+
 ### 2026-11-25 · Recepción del formato moderno de NOAA
 
 - Se incorporó el archivo CSV2 Zstandard con su nombre original. El encabezado se convierte por nombre, con coordenadas en el orden de bronce y tiempo UTC en el formato del contrato.

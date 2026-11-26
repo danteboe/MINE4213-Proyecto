@@ -14,3 +14,11 @@ Las compuertas registran causas estables. Una posición rechazada puede contar e
 | Duplicado válido de `(MMSI, BaseDateTime)` | Conservar un representante | Se prefiere SOG conocida y fila sin rescate. Con las restantes columnas como desempate total, el resultado es reproducible. |
 
 La máscara aproxima agua sobre una grilla. Puede excluir cuerpos estrechos ausentes en las referencias o admitir posiciones terrestres cerca de la costa y los ríos. `en_agua` significa evidencia de agua con tolerancia. Las tasas de rechazo se auditan por día antes de interpretar resultados. Se registra una alerta al llegar a 5% para una regla. La alerta y el conteo de causas informan revisión. La compuerta que detiene oro es una conciliación fallida. [ADR-020](adr/ADR-020-procesamiento-incremental-y-calidad.md).
+
+## Comprobación antes de oro
+
+Se valida `bronce = plata + cuarentena + duplicados válidos` sobre las tablas ya escritas para el día. Bronce y cuarentena conservan cada registro del lote. Plata conserva una fila por clave válida y almacena en `_duplicados_origen` cuántas filas válidas adicionales se retiraron. Si la diferencia es distinta de cero o el lote de bronce está vacío, falla la conciliación y se bloquean oro e inferencia.
+
+La compuerta hidrográfica v3 redujo el rechazo por agua del **39,66% al 3,10%** en el 1 de junio de 2023. La inspección de canales y la prueba con celdas conocidas respaldan el cambio de cobertura. La métrica corresponde a rechazo observado y una estimación de precisión requeriría una referencia etiquetada. [Resultados](../evidence/institucional/#revisión-de-la-compuerta-de-agua).
+
+El 29 de junio de 2026 quedó conciliado con diferencia cero sobre **10.139.168** registros. En el sandbox, un fallo de commit dejó intactas las dos filas existentes y la reanudación alcanzó seis filas, entre ellas tres rechazos con causas y un duplicado válido. [Corrida CSV2](../evidence/institucional/llegada_archivos.md#automatización-del-csv2-de-noaa) · [Fallo controlado](../evidence/institucional/#prueba-de-fallo-y-reanudación).

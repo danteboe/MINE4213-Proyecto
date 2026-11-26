@@ -1,5 +1,7 @@
 # Capturas de pantalla del dashboard — PENDIENTE DE CAPTURA POR EL EQUIPO
 
+Este registro corresponde al prototipo histórico en Free Edition. La consola institucional y su verificación visual están en la [evidencia posterior](../institucional/llegada_archivos.md#consola-publicada).
+
 - **Qué demuestra:** evidencia visual del dashboard AI/BI renderizando con datos reales.
   Las consultas ya están **Verificadas (ejecutadas)** (ver `consultas_visuales.md`), pero
   las capturas de la interfaz las debe tomar una persona del equipo con sesión iniciada en

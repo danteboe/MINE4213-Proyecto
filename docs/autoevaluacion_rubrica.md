@@ -1,14 +1,20 @@
-# Autoevaluación de la Entrega 2
+# Estado de la entrega
 
-| Peso del enunciado | Demostración |
-|---|---|
-| 15% · Streaming | Mostrar checkpoint, primera carga, fallo inducido en un commit, reanudación y replay vacío en el Job de verificación. |
-| 15% · Calidad y capas | Mostrar bronce append-only, cuarentena con causas, métricas de reglas y la conciliación por fecha que habilita oro. |
-| 20% · Orquestación | Mostrar la carga del CSV2 de NOAA, el detector que abre el DAG si hay un archivo pendiente, las seis tareas, el backfill parametrizado y los reintentos. |
-| 15% · Consola | Abrir el tablero y cambiar la fecha. Mostrar el mapa, ranking, buques en puerto y anomalías. |
-| 10% · Gobernanza | Mostrar prefijos, contrato, comentarios, linaje disponible y grants efectivos del grupo. La separación física de esquemas y de roles finos depende del administrador del curso. |
-| 10% · MLflow | Abrir experimento, snapshot y fechas, firma del modelo y versión campeona. Relacionar una alerta con modelo y run en oro. |
-| 5% · Repositorio | Revisar la bitácora, DAB, notebooks y ADR-019 a 021. |
-| 10% · Sustentación | Cada integrante sustenta el DAG y sus intercambios de datos. |
+Revisión del **26 de noviembre de 2026** contra el enunciado de la Parte 2 del proyecto final de MINE 4213, período 2026-20.
 
-Consulte [evidencia institucional](../evidence/institucional/) para distinguir los resultados observados, las pruebas reproducibles y las limitaciones.
+- **Verificados** los criterios 1, 2, 3, 4, 6 y 7. La [matriz de trazabilidad](traceability_matrix.md) desglosa cada subcriterio y enlaza el código, la configuración y las corridas observadas.
+- **Gobernanza parcialmente cubierta** en el criterio 5. Unity Catalog contiene once tablas administradas y comentadas, linaje y contrato de oro. La separación de esquemas con mínimos privilegios por rol depende de los grants de la administración del curso. [Detalle y consultas](../evidence/institucional/gobernanza.md).
+- **Sustentación preparada** para el criterio 8. El guion está listo para que lo ejecuten los tres integrantes en la última clase. [Guía](guia_sustentacion.md).
+- **Bono opcional** de Delta Sharing fuera del alcance ejecutado. Su condición es compartir oro mediante OpenSharing y consumirlo desde un tablero en un workspace independiente de Free Edition.
+
+## Ruta de revisión
+
+1. Abra el [README](../README.md) y ubique los artefactos con el [directorio](directorio_recursos.md).
+2. Consulte las [decisiones de diseño](adr/) y la [evidencia institucional](../evidence/institucional/), que registran el fallo inducido, la poda de particiones y el análisis de la compuerta de agua.
+3. Abra la cadena [detector programado](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/342422518655466/runs/789140629150470) → [pipeline exitoso](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/83886562675136/runs/796009776834361) → [consola](https://dbc-b38f0852-ecf9.cloud.databricks.com/dashboardsv3/01f1e5507d1b18a5963d1a49e4329629/published) y contraste la carga CSV2 con el producto de oro.
+
+## Cierre por parte del equipo
+
+- Confirmar que la persona evaluadora puede abrir el repositorio y los recursos institucionales que se presentarán.
+- Entregar en **Bloque Neón** con el formato habilitado por el curso. El README sirve como punto de entrada a los artefactos.
+- Realizar la sustentación. Mantener el detector cada 30 minutos hasta que el equipo indique el cambio temporal para la demostración.

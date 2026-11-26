@@ -16,6 +16,8 @@ En el clúster, Auto Loader incorporó **10.139.168 filas** con el mismo ID pers
 
 Las seis tareas terminaron en `SUCCESS` en 15 min 24 s. Oro publicó los cuatro productos y la inferencia registró **95.461 anomalías** con el campeón versión **1**. El archivo quedó confirmado en el volumen y la consulta del detector devolvió `pendientes = 0`. Las consultas del tablero con **Última fecha** devolvieron el 29 de junio de 2026, 2.000 celdas, 15 puertos y 500 filas por tabla.
 
+El 26 de noviembre se comprobó `delta.appendOnly=true` en bronce y se volvió a consultar `oceanwatch_quality_ejecuciones_job`. La corrida hija conserva seis registros `SUCCESS` con trigger `run_job_task`. Las cinco tareas posteriores a preparación registraron `2026-06-29`. [Consulta de auditoría](../../docs/runbook.md#seguimiento-de-una-carga).
+
 ## Evaluación histórica de File arrival
 
 Se reemplazó el cron de las 06:00, que estaba pausado, por una definición de **File arrival** con 60 segundos de espera y 60 segundos mínimos entre disparos. La ubicación vigilada fue `/Volumes/clase10/equipo9/checkpoints/oceanwatch_equipo9/landing/inbox/` en el volumen del equipo. Se activó temporalmente el trigger y se cargó el archivo diario oficial `AIS_2023_06_09.zip` de **343.405.316 bytes**. [Archivo NOAA 2023](https://coast.noaa.gov/htdata/CMSP/AISDataHandler/2023/).

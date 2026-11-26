@@ -9,8 +9,9 @@
 ```sh
 databricks auth login --host https://dbc-b38f0852-ecf9.cloud.databricks.com --profile oceanwatch
 databricks bundle validate -p oceanwatch --strict
-databricks bundle deploy -p oceanwatch
+databricks bundle deploy -p oceanwatch --var pausa_detector=PAUSED
 databricks bundle run -p oceanwatch oceanwatch_pipeline_entrega2 --params fecha_proceso=2023-06-08,entrenar=true
+databricks bundle deploy -p oceanwatch
 ```
 
 La preparación valida el uso de `clase14.equipo9` al crear los objetos y utiliza `/Volumes/clase10/equipo9/checkpoints/oceanwatch_equipo9`. Compruebe `CREATE TABLE`, `CREATE MODEL`, `USE SCHEMA`, `USE CATALOG`, `READ VOLUME` y `WRITE VOLUME` si cambia de identidad o de workspace. Una ruta de volumen nueva y un nombre de destino Delta nuevo deben configurarse juntos si se quiere reproducir desde cero. La variable `--var warehouse_id=<id>` permite elegir otro almacén SQL con `CAN USE` para su cuenta y el grupo consumidor.
@@ -18,7 +19,7 @@ La preparación valida el uso de `clase14.equipo9` al crear los objetos y utiliz
 ## Cargar un archivo
 
 1. Abra el volumen `clase10.equipo9.checkpoints` en Catalog y navegue a `oceanwatch_equipo9/landing/inbox/`. Cargue el archivo directamente en esa carpeta. El CSV2 moderno conserva el nombre `ais-AAAA-MM-DD.csv.zst`. Para archivos de la serie original use `AIS_AAAA_MM_DD.zip` o `AIS_AAAA_MM_DD.csv`. El formato original admite un sufijo de lote como `_parte2`.
-2. El [detector](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/342422518655466) consulta a las horas y medias horas en UTC. La siguiente revisión disponible inicia el [pipeline](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/83886562675136) si aparece una entrega pendiente. Las revisiones sin entradas dejan la tarea `procesar` en `EXCLUDED`. Si una revisión está ocupada con el pipeline, Lakeflow omite el siguiente tick y vuelve a consultar en uno posterior.
+2. El detector consulta a la hora y a la media hora en Bogotá. Cuando encuentra una entrega pendiente, la tarea `Run Job` inicia Entrega 2 en el clúster personal. Databricks lo arranca si está apagado. Si la bandeja está al día, `procesar` queda en `EXCLUDED` y no se solicita cómputo clásico. Si el detector sigue ocupado con un hijo, Lakeflow omite el siguiente tick y vuelve a consultar en uno posterior. [Detector](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/342422518655466) · [Pipeline](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/83886562675136) · [Arranque automático de cómputo](https://docs.databricks.com/aws/en/compute/clusters-manage#compute-autostart-for-jobs-and-jdbcodbc-queries).
 3. Tras `SUCCESS`, recargue el tablero para consultar los datos nuevos. El filtro acepta una fecha UTC en formato AAAA-MM-DD y **Última fecha** muestra el día más reciente de oro.
 
 ```powershell
@@ -27,7 +28,7 @@ La preparación valida el uso de `clase14.equipo9` al crear los objetos y utiliz
 
 El script resuelve la carpeta del bundle y sube el archivo sin sobrescribir. Databricks se encarga de iniciar el procesamiento. La carpeta recibe entregas inmutables identificadas por nombre. Para CSV2, el Job valida el encabezado y proyecta las columnas al esquema de bronce mientras descomprime el archivo en disco local. Para el ZIP comprueba el CRC. Publica el CSV procesable en `landing/csv/date=AAAA-MM-DD/` y registra las fechas de la corrida en `control_landing/corridas/`. Los archivos se confirman en `control_landing/confirmados/` al terminar inferencia. El Job reutiliza el checkpoint persistente de Auto Loader. Si hay un archivo inválido o una colisión con otro contenido, la corrida falla con el nombre del archivo. Corrija la bandeja antes de reintentar.
 
-Para una demostración en clase, se puede desplegar temporalmente con `--var "cron_detector=0 0/2 * * * ?"` y volver a desplegar con el valor por defecto de 30 minutos. Las revisiones usan el warehouse y pueden iniciarlo si está detenido.
+El intervalo vigente es **30 minutos**. El cambio temporal a 2 minutos está reservado para la sustentación y se ejecuta cuando el equipo lo indique. Las revisiones usan el warehouse y pueden iniciarlo si está detenido. [Guía de sustentación](guia_sustentacion.md#demostración-de-llegada).
 
 ### Activar File arrival
 
@@ -37,16 +38,41 @@ Lakeflow vigila solo `landing/inbox/`, espera 60 segundos sin nuevos archivos y 
 
 ## Backfill y reintentos
 
-- El valor vacío de `fecha_proceso` drena las entradas pendientes, tanto desde el detector como con **Run now**. Si la bandeja está al día, el Job registra una corrida vacía. El cron de las 06:00 es evidencia histórica del prototipo institucional.
+- El valor vacío de `fecha_proceso` drena las entradas pendientes, tanto desde el detector como con **Run now**. Si la bandeja está al día, una corrida manual registra un lote vacío. El cron de las 06:00 es evidencia histórica del prototipo institucional.
 - Para descargar una fecha del archivo histórico ZIP directamente de NOAA, ejecute `databricks bundle run oceanwatch_pipeline_entrega2 --params fecha_proceso=AAAA-MM-DD`. Use `fecha_inicio` para un intervalo inclusivo de hasta 31 días. Los archivos CSV2 se incorporan por la bandeja. El Job espera en cola si otro lote está activo. En `entrenar=true` se incluyen train y validación para construir la plata de entrenamiento. La tarea final puntúa las fechas solicitadas posteriores al train. El modelo se promueve cuando su versión está lista en Unity Catalog.
-- Los reintentos de ingesta reutilizan los CSV publicados, la tabla Delta y el checkpoint. Si la descarga se interrumpe, compare la longitud y vuelva a ejecutar la tarea. Conserve el archivo que ya haya sido consumido con su nombre estable. Ante la pérdida del checkpoint, la recuperación requiere reconstruir en destinos aislados y validar conteos antes de conmutar. Eliminar solo el checkpoint de producción puede reingestar todo el landing.
+- La ingesta de backfill también incorpora archivos pendientes de la bandeja. Los reintentos reutilizan los CSV publicados, la tabla Delta y el checkpoint. Si una carga se interrumpe, valide su integridad y repita la copia antes de reintentar. Ante la pérdida del checkpoint, reconstruya en destinos aislados y valide conteos antes de conmutar. Eliminar solo el checkpoint de producción puede reingestar todo el landing.
 - Consulte la interfaz de Lakeflow Jobs para fallos, número de intento y tiempo por tarea. Consulte `clase14.equipo9.oceanwatch_quality_ejecuciones_job` para resultados y conteos por tarea. Las tareas que ni siquiera arrancan, como un fallo de librería o aprovisionamiento, se diagnostican en Lakeflow. Una discrepancia de conciliación bloquea oro y ML. Corrija insumos y repare desde plata o desde la primera tarea afectada.
 - La publicación por fecha es atómica por tabla. Los productos de oro pueden reflejar versiones de corridas distintas mientras termina la publicación múltiple. Si una tarea falla entre escrituras, el reintento sustituye el día y conserva el histórico de los demás. Valide el resultado completo al finalizar el Job.
 
+### Seguimiento de una carga
+
+| Observación | Dónde revisar |
+|---|---|
+| La carga terminó y todavía no hay una corrida | En el detector, revise la siguiente ejecución programada y compruebe el nombre y la subruta del archivo. |
+| `detectar` terminó con `pendientes = 0` | Compare `landing/inbox/` con `control_landing/confirmados/`. El nombre confirmado identifica una entrega ya publicada. |
+| `procesar` inició | Abra la corrida hija de Entrega 2 desde la tarea `Run Job`. El notebook de ingesta imprime las fechas y el ID del stream. |
+| El Job falló | Abra la tarea fallida, su intento y la auditoría. La próxima revisión vuelve a encontrar el archivo mientras esté pendiente. Puede reparar desde la primera tarea que requiera corrección. |
+| ML terminó correctamente | Compruebe el marcador en `control_landing/confirmados/` y consulte la fecha en la consola. |
+
+```sql
+SELECT task_key, fecha_proceso, estado, trigger, ts_inicio, ts_fin, filas_clave, detalle
+FROM clase14.equipo9.oceanwatch_quality_ejecuciones_job
+WHERE job_run_id = 796009776834361
+ORDER BY ts_inicio;
+```
+
 ## Verificación y consola
 
+Las pruebas unitarias se pueden ejecutar sin credenciales ni Spark.
+
 ```sh
-databricks bundle run oceanwatch_verificacion --params fecha_proceso=2023-06-08
+uv run --no-project --python 3.12 --with pytest --with pyyaml --with pyzstd==0.20.0 --with global-land-mask==1.0.0 --with shapely==2.1.2 python -m pytest -q
+```
+
+Use el Job institucional para la prueba de integración con Spark y Unity Catalog.
+
+```sh
+databricks bundle run -p oceanwatch oceanwatch_verificacion --params fecha_proceso=2023-06-01,medir_poda=true
 ```
 
 El Job de verificación usa un checkpoint y tablas efímeras para simular un commit fallido, reanudarlo y comprobar cuarentena, duplicados y replay vacío. También compara el mismo resultado de una consulta de zona y día con y sin poda de particiones. El tamaño de archivos informado corresponde al tamaño de los objetos tocados y es una cota del I/O físico de las columnas Parquet solicitadas.

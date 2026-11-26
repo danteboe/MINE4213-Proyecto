@@ -4,15 +4,21 @@ OceanWatch procesa mensajes AIS de NOAA para consultar el tráfico, la presencia
 
 ## Entrega 2
 
-- [Job de Lakeflow](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/83886562675136) · seis tareas en el clúster personal de Juan David.
-- [Tablero AI/BI](https://dbc-b38f0852-ecf9.cloud.databricks.com/dashboardsv3/01f1e5507d1b18a5963d1a49e4329629/published) · mapa de intensidad, ranking de puertos, buques en puerto y anomalías por fecha UTC.
-- [Arquitectura Spark](docs/architecture/medallion-overview.md) · particiones, broadcast, ventanas y conciliación.
-- [Runbook](docs/runbook.md) · despliegue, carga desde el volumen, backfill y reparación.
-- [Trazabilidad](docs/traceability_matrix.md) y [evidencia institucional](evidence/institucional/) · alcance y resultados observados.
+**Equipo 9** · Alejandro Abril, David Fernando Caro y Juan David Torres Albarracín.
+
+| Para | Abrir |
+|---|---|
+| Encontrar un Job, volumen, notebook, tabla, clúster, tablero o experimento | [Directorio de recursos](docs/directorio_recursos.md) |
+| Revisar los ocho criterios del enunciado | [Matriz de trazabilidad](docs/traceability_matrix.md) y [estado de entrega](docs/autoevaluacion_rubrica.md) |
+| Entender y justificar el diseño | [Arquitectura Spark](docs/architecture/medallion-overview.md), [DAG](docs/architecture/fase4-dag-orquestacion.md) y [decisiones](docs/adr/) |
+| Cargar archivos, reproducir una corrida o diagnosticar fallos | [Runbook](docs/runbook.md) |
+| Verificar resultados y preparar la presentación | [Evidencia institucional](evidence/institucional/) y [guía de sustentación](docs/guia_sustentacion.md) |
+
+[Detector de archivos](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/342422518655466) → [Job Entrega 2](https://dbc-b38f0852-ecf9.cloud.databricks.com/jobs/83886562675136) → [Tablero AI/BI](https://dbc-b38f0852-ecf9.cloud.databricks.com/dashboardsv3/01f1e5507d1b18a5963d1a49e4329629/published).
 
 El DAG ejecuta **preparación → ingesta → plata → conciliación → oro → ML**. Auto Loader usa un checkpoint persistente y un sink Delta append-only. Plata aplica reglas, conserva los rechazos con causas y deduplica por buque y timestamp. Los pings del día que pasa conciliación alimentan los agregados y la inferencia. El IsolationForest queda versionado en Unity Catalog mediante MLflow. El SQL warehouse institucional sirve las consultas del tablero.
 
-El backfill institucional inicial cubrió el **1–8 de junio de 2023**. Los ocho días conciliaron con diferencia cero sobre **69.454.003 posiciones** en bronce. La prueba de incorporación desde el volumen del 9 de junio está en la [evidencia institucional](evidence/institucional/llegada_archivos.md).
+El backfill institucional inicial cubrió el **1–8 de junio de 2023** y concilió **69.454.003 posiciones** en bronce. La prueba posterior con el CSV2 original del **29 de junio de 2026** activó el pipeline desde el detector y concilió **10.139.168 posiciones** con diferencia cero. La inferencia publicó **95.461 anomalías** con el modelo campeón versión 1. [Evidencia de carga y resultados](evidence/institucional/llegada_archivos.md).
 
 | Recurso | Ubicación |
 |---|---|
@@ -20,17 +26,15 @@ El backfill institucional inicial cubrió el **1–8 de junio de 2023**. Los och
 | Landing y checkpoint | `/Volumes/clase10/equipo9/checkpoints/oceanwatch_equipo9` |
 | Bandeja de archivos nuevos | `/Volumes/clase10/equipo9/checkpoints/oceanwatch_equipo9/landing/inbox/` |
 | Configuración | [conf/config.yaml](conf/config.yaml), sección `institucional` |
-| Despliegue | [databricks.yml](databricks.yml), [Jobs](resources/jobs/), [tablero](resources/dashboards/) y [recursos ML](resources/ml/) |
-| Entrypoints | [Pipeline](notebooks/oceanwatch_cluster.py) y [verificación](notebooks/oceanwatch_verificacion.py) |
-| Decisiones | [ADR-019](docs/adr/ADR-019-computo-y-almacenamiento-institucional.md), [ADR-020](docs/adr/ADR-020-procesamiento-incremental-y-calidad.md), [ADR-021](docs/adr/ADR-021-modelo-sog-en-cluster.md), [ADR-022](docs/adr/ADR-022-llegada-de-archivos.md) |
+| Despliegue | [databricks.yml](databricks.yml) y [directorio de implementaciones](docs/directorio_recursos.md#notebooks-y-código-desplegado) |
 
-El workspace del curso otorga privilegios al grupo `mine-group9` en un único esquema. Los prefijos distinguen capas y los permisos para el Job y el tablero se asignan por recurso. El [ADR-019](docs/adr/ADR-019-computo-y-almacenamiento-institucional.md) detalla el estado de los roles y los permisos que requiere separar capas en esquemas físicos.
+La cobertura de gobernanza es parcial. Unity Catalog conserva linaje, comentarios y permisos del grupo `mine-group9`. La segregación efectiva de capas y roles requiere esquemas y grants de la administración del curso. [Contrato de oro](docs/data_contract_gold.md) · [Gobernanza verificada](evidence/institucional/gobernanza.md).
 
 ### Incorporar un archivo nuevo
 
 En **Catalog → clase10 → equipo9 → checkpoints**, abra `oceanwatch_equipo9/landing/inbox` y cargue el archivo de NOAA tal como lo descargó. Se admiten `ais-AAAA-MM-DD.csv.zst`, `AIS_AAAA_MM_DD.zip` y `AIS_AAAA_MM_DD.csv`. Para un lote adicional en el formato ZIP o CSV original use un sufijo, por ejemplo `AIS_2023_06_10_parte2.csv`. Cada nombre identifica una entrega inmutable.
 
-Un detector automático consulta la bandeja cada **30 minutos**. Si encuentra archivos pendientes lanza el DAG completo en el clúster clásico. El detector usa el warehouse SQL existente para consultar nombres y confirmaciones. **File arrival** queda preparado para activarse cuando el administrador habilite los eventos de archivos en AWS. En Windows, el script también permite cargar el archivo.
+El detector consulta la bandeja **a la hora y a la media hora**. Si encuentra archivos pendientes, lanza el DAG completo. Databricks arranca el clúster clásico si está apagado. El detector usa el warehouse SQL para nombres y confirmaciones. El trigger nativo **File arrival** queda pausado hasta que el administrador habilite los eventos de archivos en AWS. En Windows, el script también permite cargar el archivo.
 
 ```powershell
 .\tools\subir_ais.ps1 -Archivo 'C:\Descargas\ais-2026-06-29.csv.zst' -Perfil oceanwatch
@@ -40,24 +44,23 @@ El DAG toma las fechas de los nombres, convierte los CSV2 comprimidos al esquema
 
 ### Reproducir
 
-Estos comandos reproducen la corrida inicial después de [autenticar la CLI con OAuth](docs/runbook.md).
+Estas comprobaciones usan el [perfil OAuth institucional](docs/runbook.md). El Job de verificación crea un sandbox y mide poda leyendo la plata disponible.
 
 ```sh
-databricks bundle validate --strict
-databricks bundle deploy
-databricks bundle run oceanwatch_pipeline_entrega2 --params fecha_proceso=2023-06-08,entrenar=true
-databricks bundle run oceanwatch_verificacion --params fecha_proceso=2023-06-08
+databricks bundle validate --strict -p oceanwatch
+databricks bundle run -p oceanwatch oceanwatch_verificacion --params fecha_proceso=2023-06-01,medir_poda=true
 ```
 
-La primera corrida incluye las fechas 1, 2 y 3 para construir el train y la validación temporal. Un backfill posterior al train solo requiere `fecha_proceso` y reutiliza el campeón. El repositorio excluye tokens, perfiles de autenticación y archivos `*.key`.
+El [runbook](docs/runbook.md#despliegue) detalla el despliegue inicial, el entrenamiento y el backfill. El repositorio excluye tokens, perfiles de autenticación y archivos `*.key`.
 
 ### Fuentes
 
-- AIS diarios, Marine Cadastre / NOAA. [Archivo 2023](https://coast.noaa.gov/htdata/CMSP/AISDataHandler/2023/).
+- AIS diarios, Marine Cadastre / NOAA. [ZIP históricos de 2023](https://coast.noaa.gov/htdata/CMSP/AISDataHandler/2023/) · [CSV2 Zstandard de 2026](https://www.fisheries.noaa.gov/inport/item/80362).
 - [World Port Index de NGA](https://msi.nga.mil/Publications/WPI). El CSV versionado extrae 7 campos y 3.669 registros del shapefile de la Entrega 1. `INDEX_NO` se normaliza a entero. El ZIP original queda fuera del repositorio.
 - Global Land Mask 1.0.0, máscara ráster derivada de GLOBE. [Código y datos](https://github.com/toddkarin/global-land-mask).
 - Canales y ríos navegables de NWN, instantánea del 18 de enero de 2023, y lagos de Natural Earth 5.0.0. El [ADR-020](docs/adr/ADR-020-procesamiento-incremental-y-calidad.md) documenta la proyección hidrográfica reproducible. [NTAD de BTS](https://rosap.ntl.bts.gov/view/dot/56264) y [Natural Earth](https://www.naturalearthdata.com/downloads/10m-physical-vectors/).
-- `notebooks/fase*`, `resources/sql/fase*`, ADR-001 a 018 y las carpetas de evidencia `req01` a `req08` registran el prototipo en Free Edition. Los entrypoints de arriba definen el flujo vigente.
+
+Los ADR-001 a 018, notebooks de fase y carpetas `req01-*` a `req06-*` conservan el prototipo en Free Edition. El directorio y la evidencia institucional describen el despliegue de la Parte 2.
 
 ---
 
