@@ -1,7 +1,0 @@
-{
-  "task_id": "task-fase2-streaming",
-  "task_description": "Fase 2 (Req. 1, 15%) de OceanWatch Analytics: implementar la ingesta en streaming de los zips diarios NOAA (descarga+descompresion -> Volume landing -> Auto Loader cloudFiles con esquema explicito de 17 campos + rescued data -> tabla Delta bronze oceanwatch.bronze.ais_raw APPEND-ONLY con Trigger.availableNow y auditoria; dedup por MMSI+BaseDateTime con watermark 24h en el paso bronze->silver), ejecutarla de verdad en Databricks serverless capturando conteos reales, ejecutar 4 pruebas de tolerancia a fallos con resultados OBSERVADOS, y documentar todo (ADR-006 dedup+watermark, ADR-007 checkpoints, ADR-008 tipo Status+rescued data; bitacora 2026-11-05; matriz de trazabilidad fila Req.1). Todo en espanol con evidencia real; nada inventado.",
-  "status": "pending",
-  "feature_order": ["FEAT-001", "FEAT-002"],
-  "blocked_reason": null
-}
