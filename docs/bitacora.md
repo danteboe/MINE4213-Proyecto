@@ -17,6 +17,12 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 
 ## Entradas
 
+### 2026-11-26 · Cierre del repositorio y preparación para Bloque Neón
+
+- Se añadió al `.gitignore` la configuración local de agentes, incluidas las carpetas `.agents` a cualquier profundidad. Se retiraron de `main` doce archivos internos de trabajo conservando las copias locales. [Commit de limpieza](https://github.com/danteboe/MINE4213-Proyecto/commit/2652a4b0fd19471dcd00070fb2fbe85ad7082d6c).
+- Se preparó el mensaje para Bloque Neón con el enlace al repositorio y las rutas del volumen de entrada, los Jobs, las tablas, el modelo y el tablero del Equipo 9. [Directorio de recursos](directorio_recursos.md).
+- Quedan la entrega formal en Bloque Neón y la sustentación. El detector sigue cada 30 minutos. El intervalo temporal de dos minutos se reserva para la demostración. [Guía de sustentación](guia_sustentacion.md).
+
 ### 2026-11-26 · Revisión contra el enunciado y preparación de entrega
 
 - Se cotejaron los ocho criterios y el bono opcional contra el PDF de la Parte 2, el código y los recursos institucionales. Se verificaron las corridas de carga, reanudación y poda, la consola publicada y el alias del modelo.
