@@ -1,7 +1,6 @@
 # Bitácora — OceanWatch Analytics (Entrega 2)
 
-Registro cronológico del trabajo del equipo (Req. 7). Cada sesión se documenta con la
-plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigua.
+Registro cronológico del Equipo 9 para el requisito 7. Las fechas siguen la hora de Bogotá. Los apartados históricos se ubican en el día en que el cambio quedó registrado en Git. Las fechas de las pruebas se conservan en sus propias evidencias.
 
 ## Plantilla de entrada
 
@@ -17,30 +16,45 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 
 ## Entradas
 
-### 2026-11-26 · Cierre del repositorio y preparación para Bloque Neón
+### 2026-11-26 · Revisión de la rúbrica y cierre de la entrega
 
-- Se añadió al `.gitignore` la configuración local de agentes, incluidas las carpetas `.agents` a cualquier profundidad. Se retiraron de `main` doce archivos internos de trabajo conservando las copias locales. [Commit de limpieza](https://github.com/danteboe/MINE4213-Proyecto/commit/2652a4b0fd19471dcd00070fb2fbe85ad7082d6c).
-- Se preparó el mensaje para Bloque Neón con el enlace al repositorio y las rutas del volumen de entrada, los Jobs, las tablas, el modelo y el tablero del Equipo 9. [Directorio de recursos](directorio_recursos.md).
-- Quedan la entrega formal en Bloque Neón y la sustentación. El detector sigue cada 30 minutos. El intervalo temporal de dos minutos se reserva para la demostración. [Guía de sustentación](guia_sustentacion.md).
-
-### 2026-11-26 · Revisión contra el enunciado y preparación de entrega
+#### Revisión institucional y documentación
 
 - Se cotejaron los ocho criterios y el bono opcional contra el PDF de la Parte 2, el código y los recursos institucionales. Se verificaron las corridas de carga, reanudación y poda, la consola publicada y el alias del modelo.
 - Se comprobó que hay once tablas Delta administradas y comentadas, que Unity Catalog registra el linaje principal y que los Jobs y el tablero tienen permisos propios. La separación efectiva por esquema y rol sigue dependiendo de la administración.
 - Se organizó la entrega desde el README y se añadió el directorio de recursos. Se actualizaron arquitectura, contrato, reglas, decisiones, operación y guion de sustentación. [Matriz](traceability_matrix.md) · [Directorio](directorio_recursos.md) · [Guía](guia_sustentacion.md).
 
-### 2026-11-25 · Recepción del formato moderno de NOAA
+[Auditoría publicada](https://github.com/danteboe/MINE4213-Proyecto/commit/b1fc7a3).
+
+#### Limpieza del repositorio y preparación para Bloque Neón
+
+- Se añadió al `.gitignore` la configuración local de agentes, incluidas las carpetas `.agents` a cualquier profundidad. Se retiraron de `main` doce archivos internos de trabajo conservando las copias locales. [Commit de limpieza](https://github.com/danteboe/MINE4213-Proyecto/commit/2652a4b0fd19471dcd00070fb2fbe85ad7082d6c).
+- Se preparó el mensaje para Bloque Neón con el enlace al repositorio y las rutas del volumen de entrada, los Jobs, las tablas, el modelo y el tablero del Equipo 9. [Directorio de recursos](directorio_recursos.md).
+- Quedan la entrega formal en Bloque Neón y la sustentación. El detector sigue cada 30 minutos. El intervalo temporal de dos minutos se reserva para la demostración. [Guía de sustentación](guia_sustentacion.md).
+
+### 2026-11-25 · Recepción automática de archivos y corrección del tablero
+
+#### CSV2 Zstandard y verificación de la llegada automática
 
 - Se incorporó el archivo CSV2 Zstandard con su nombre original. El encabezado se convierte por nombre, con coordenadas en el orden de bronce y tiempo UTC en el formato del contrato.
 - Se habilitó un detector SQL con intervalo de 30 minutos por el bloqueo de eventos de almacenamiento. Se comprobó un tick sin archivos pendientes y un tick que lanzó el DAG clásico después de cargar el archivo del 29 de junio de 2026.
+- El detector lanzó la corrida hija automáticamente a las **16:10**. Sus seis tareas terminaron correctamente, conciliaron **10.139.168 posiciones** y publicaron **95.461 anomalías** con el modelo campeón versión 1. Se restauró el intervalo de producción de 30 minutos tras la prueba de dos minutos.
 - Se registraron las pruebas del detector, la corrida de negocio y el plan de lectura de metadatos. [ADR-022](adr/ADR-022-llegada-de-archivos.md) · [Evidencia](../evidence/institucional/llegada_archivos.md).
 
-### 2026-11-25 · Incorporación desde el volumen y corrección del tablero
+[Cambios de CSV2 y detector](https://github.com/danteboe/MINE4213-Proyecto/commit/ffad984).
+
+#### Carga ZIP, prueba del trigger nativo y corrección del tablero
 
 - Se separó la carpeta de recepción del staging de Auto Loader. El manifiesto transmite las fechas de trabajo y la tarea de ML confirma las entradas.
 - File arrival reemplazó al cron pausado. La prueba falló antes de lanzar cómputo por un permiso del rol de almacenamiento institucional en AWS. La definición quedó en pausa y se documentó cómo reactivarla.
-- Se procesó el ZIP del 9 de junio cargado en el volumen mediante una corrida con fecha vacía. El tablero se republicó y se validaron los mapas, las tablas, el ranking y el filtro en el navegador institucional.
+- A las **13:32** arrancó la corrida con fecha vacía que procesó el ZIP del 9 de junio de 2023. Entraron **8.791.124 posiciones**, la conciliación cerró con diferencia cero y la repetición leyó cero filas nuevas. El tablero se republicó y se validaron los mapas, las tablas, el ranking y el filtro en el navegador institucional.
 - Se documentaron el diseño y los resultados observados. [ADR-022](adr/ADR-022-llegada-de-archivos.md) · [Evidencia](../evidence/institucional/llegada_archivos.md).
+
+[Cambios de ingesta y tablero](https://github.com/danteboe/MINE4213-Proyecto/commit/87d61ae).
+
+### 2026-11-24 · Estado al cierre del día
+
+El último hito verificable era el despliegue institucional del 20 de noviembre. La revisión de Git y Lakeflow devolvió cero commits y cero corridas de OceanWatch fechados el 24. El siguiente avance registrado es la prueba de incorporación por archivos del día 25. [Evidencia del despliegue](../evidence/institucional/).
 
 ### 2026-11-20 · Migración institucional a cómputo clásico
 
@@ -50,7 +64,64 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 - Se concluyó el backfill de los ocho días y la prueba de programación. El replay programado reprodujo fila por fila las anomalías del 8 de junio. La prueba de poda mantuvo el conteo y redujo el tamaño de archivos tocados en 66,1%.
 - Se actualizaron el runbook, el contrato de oro y la trazabilidad. Las decisiones sobre cómputo, exchanges y ML se registraron en los ADR-019 a 021. Los resultados institucionales se añaden a [evidencia](../evidence/institucional/).
 
-### 2026-11-05 — Cierre consolidado (Req. 7 + documentación transversal) — Equipo OceanWatch
+La migración, la reducción de llaves de shuffle y el cierre del backfill quedaron registrados en commits separados. [Migración](https://github.com/danteboe/MINE4213-Proyecto/commit/beba643) · [Planes y recursos ML](https://github.com/danteboe/MINE4213-Proyecto/commit/fa78152) · [Backfill](https://github.com/danteboe/MINE4213-Proyecto/commit/f9c0bfe).
+
+### 2026-11-14 · Tablero y consolidación documental del prototipo
+
+Las siguientes notas corresponden a Free Edition. La versión institucional vigente está en el [directorio de recursos](directorio_recursos.md).
+
+#### Fase 7 · Consola de visualización (Req. 4)
+
+[Registro en Git](https://github.com/danteboe/MINE4213-Proyecto/commit/0ca782d).
+
+- **Objetivo de la sesión:** cerrar el Req. 4 con **evidencia real**: una consola de
+  visualización en **Databricks AI/BI Dashboards** (recurso Lakeview, NO Power BI) que
+  consuma **exclusivamente** la capa oro, con los 4 visuales obligatorios, un parámetro de
+  fecha, definición como código en el repo y **despliegue real** (publicado) en el workspace.
+- **Qué se hizo:**
+  - **Vista de apoyo en oro (D2/D4):** `resources/sql/fase7_matriz_trafico_diaria.sql` crea
+    `gold.matriz_trafico_diaria` (`CREATE OR REPLACE TABLE ... AS SELECT`, agrega la matriz
+    horaria `gold.matriz_trafico` a 1 fila por celda-día). Ejecutada en serverless
+    (`377600528fed7c47`): **1.027.635** filas (06-01: 332.177; 06-02: 370.872; 06-03:
+    324.586). El mapa lee esta tabla pre-agregada en vez de recomputar sobre 2,3 M filas.
+  - **Definición como código:** `resources/dashboards/oceanwatch_oro.lvdash.json` — 4 datasets
+    (los 4 visuales), 1 página con título, filtro de **fecha** (`filter-single-select`) y 7
+    widgets: V1 mapa de intensidad (`symbol-map` sobre `gold.matriz_trafico_diaria`), V2
+    barras ranking de puertos (`gold.presencia_puertos`), V3 tabla buques en puerto
+    (`gold.presencia_puertos`), V4 tabla + mapa de anomalías (`gold.anomalias_velocidad`,
+    `es_anomalia=true`). Parámetro único `:fecha` tipo DATE (default 2023-06-03) en los 4
+    datasets. 0 referencias a bronze/silver.
+  - **Despliegue REAL (D1, vía REST):** `POST /api/2.0/lakeview/dashboards` +
+    `POST .../published` sobre el warehouse serverless. Dashboard
+    **`01f1da0367841f3db6c6ddcb8edaa849`**, `lifecycle_state=ACTIVE`, publicado
+    (`embed_credentials=true`). URL publicada
+    `https://dbc-a568bc49-bdae.cloud.databricks.com/dashboardsv3/01f1da0367841f3db6c6ddcb8edaa849/published`.
+    Dashboard único de este proyecto (no se dejaron de prueba).
+  - **Verificación de datos:** las 4 consultas corridas vía `_dbx_sql.py` retornan filas
+    reales (V1 top 39.470; V2 NEW YORK CITY 92; V3 MMSI con 1.347 posiciones; V4 67.828
+    anomalías el 06-03). Parámetro `:fecha` validado con las 3 fechas (V4 vacío en 06-01/02 y
+    67.828 en 06-03, correcto por el corpus).
+  - **Documentación + trazabilidad:** ADR-017 (9 secciones, Aceptado), contrato de oro con
+    `gold.matriz_trafico_diaria`, evidencia en `evidence/req04-dashboard/`
+    (`consultas_visuales`, `vista_apoyo_matriz_diaria`, `despliegue_dashboard`,
+    `validacion_parametro_fecha`, `confirmacion_solo_oro`, `capturas_PENDIENTE`), esta entrada
+    y la fila Req. 4 de la matriz a **Verificado (ejecutado)**.
+- **Decisiones/ADRs tocados:** **ADR-017** (AI/BI Dashboards + REST + vista de apoyo en oro +
+  parámetro `fecha` + consumo solo-oro + decisión de refresco). Cita **ADR-016** (definición
+  de "anomalía del día"), **ADR-001** (grilla 2 decimales) y **ADR-012** (modelo dimensional).
+- **Estado Verificado vs Diseñado:** **Verificado (ejecutado)** = tabla de apoyo poblada, las
+  4 consultas con filas reales, dashboard creado y publicado (ID/URL reales), parámetro de
+  fecha validado. **Pendiente del equipo:** solo las **capturas de pantalla** de la interfaz
+  (`capturas_PENDIENTE.md`), no automatizables sin navegador autenticado.
+- **Evidencia:** `evidence/req04-dashboard/`.
+- **Pendientes / siguiente paso:** que el equipo tome las capturas listadas en
+  `capturas_PENDIENTE.md`. Refresco acoplado al Job: **descartado** (el dashboard lee oro en
+  vivo; ver ADR-017 §7).
+
+#### Cierre consolidado del prototipo (Req. 7)
+
+[Registro en Git](https://github.com/danteboe/MINE4213-Proyecto/commit/0ca782d).
+
 - **Objetivo de la sesión:** consolidar la documentación de cierre de la Entrega 2 (sin nueva
   implementación): dejar el repo como punto de entrada reproducible, cerrar el Req. 7 y producir
   los artefactos de autoevaluación, pendientes del equipo y guía de sustentación, coherentes con
@@ -94,10 +165,14 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 - **Pendientes / siguiente paso:** solo acciones manuales del equipo (no software): **capturas de
   UI** del dashboard (4 visuales + parámetro de fecha) y del grafo de linaje en Catalog Explorer
   (procedimiento en `docs/pendientes_equipo.md`). Sustentación presencial en la última clase.
-  *Nota de fechas:* algunos timestamps de linaje figuran como 2026-11-06 por UTC; el trabajo es de
-  la sesión del 2026-11-05.
+  *Nota de fechas:* esta síntesis publicada el 14 reúne pruebas del prototipo del 5 y 6 de noviembre.
 
-### 2026-11-05 — Fase 5: Gobernanza (Req. 5) — Equipo OceanWatch
+### 2026-11-06 · Capas de calidad, orquestación, ML y gobernanza en Free Edition
+
+#### Fase 5 · Gobernanza (Req. 5)
+
+[Registro en Git](https://github.com/danteboe/MINE4213-Proyecto/commit/3fb72e5).
+
 - **Objetivo de la sesión:** cerrar el Req. 5 con **evidencia real**: gobernanza efectiva del
   lakehouse sobre Unity Catalog — permisos de **mínimo privilegio** por rol, **linaje**
   verificado por API y **documentación en el securable** (comentarios de tabla/columna),
@@ -154,52 +229,10 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
   Explorer (procedimiento en `linaje.md`). Deuda reconocida en ADR-018 §7: *tags* de
   clasificación y política de evolución de esquema del oro (fuera del alcance de la Fase 5).
 
-### 2026-11-05 — Fase 7: Consola de visualización (Req. 4) — Equipo OceanWatch
-- **Objetivo de la sesión:** cerrar el Req. 4 con **evidencia real**: una consola de
-  visualización en **Databricks AI/BI Dashboards** (recurso Lakeview, NO Power BI) que
-  consuma **exclusivamente** la capa oro, con los 4 visuales obligatorios, un parámetro de
-  fecha, definición como código en el repo y **despliegue real** (publicado) en el workspace.
-- **Qué se hizo:**
-  - **Vista de apoyo en oro (D2/D4):** `resources/sql/fase7_matriz_trafico_diaria.sql` crea
-    `gold.matriz_trafico_diaria` (`CREATE OR REPLACE TABLE ... AS SELECT`, agrega la matriz
-    horaria `gold.matriz_trafico` a 1 fila por celda-día). Ejecutada en serverless
-    (`377600528fed7c47`): **1.027.635** filas (06-01: 332.177; 06-02: 370.872; 06-03:
-    324.586). El mapa lee esta tabla pre-agregada en vez de recomputar sobre 2,3 M filas.
-  - **Definición como código:** `resources/dashboards/oceanwatch_oro.lvdash.json` — 4 datasets
-    (los 4 visuales), 1 página con título, filtro de **fecha** (`filter-single-select`) y 7
-    widgets: V1 mapa de intensidad (`symbol-map` sobre `gold.matriz_trafico_diaria`), V2
-    barras ranking de puertos (`gold.presencia_puertos`), V3 tabla buques en puerto
-    (`gold.presencia_puertos`), V4 tabla + mapa de anomalías (`gold.anomalias_velocidad`,
-    `es_anomalia=true`). Parámetro único `:fecha` tipo DATE (default 2023-06-03) en los 4
-    datasets. 0 referencias a bronze/silver.
-  - **Despliegue REAL (D1, vía REST):** `POST /api/2.0/lakeview/dashboards` +
-    `POST .../published` sobre el warehouse serverless. Dashboard
-    **`01f1da0367841f3db6c6ddcb8edaa849`**, `lifecycle_state=ACTIVE`, publicado
-    (`embed_credentials=true`). URL publicada
-    `https://dbc-a568bc49-bdae.cloud.databricks.com/dashboardsv3/01f1da0367841f3db6c6ddcb8edaa849/published`.
-    Dashboard único de este proyecto (no se dejaron de prueba).
-  - **Verificación de datos:** las 4 consultas corridas vía `_dbx_sql.py` retornan filas
-    reales (V1 top 39.470; V2 NEW YORK CITY 92; V3 MMSI con 1.347 posiciones; V4 67.828
-    anomalías el 06-03). Parámetro `:fecha` validado con las 3 fechas (V4 vacío en 06-01/02 y
-    67.828 en 06-03, correcto por el corpus).
-  - **Documentación + trazabilidad:** ADR-017 (9 secciones, Aceptado), contrato de oro con
-    `gold.matriz_trafico_diaria`, evidencia en `evidence/req04-dashboard/`
-    (`consultas_visuales`, `vista_apoyo_matriz_diaria`, `despliegue_dashboard`,
-    `validacion_parametro_fecha`, `confirmacion_solo_oro`, `capturas_PENDIENTE`), esta entrada
-    y la fila Req. 4 de la matriz a **Verificado (ejecutado)**.
-- **Decisiones/ADRs tocados:** **ADR-017** (AI/BI Dashboards + REST + vista de apoyo en oro +
-  parámetro `fecha` + consumo solo-oro + decisión de refresco). Cita **ADR-016** (definición
-  de "anomalía del día"), **ADR-001** (grilla 2 decimales) y **ADR-012** (modelo dimensional).
-- **Estado Verificado vs Diseñado:** **Verificado (ejecutado)** = tabla de apoyo poblada, las
-  4 consultas con filas reales, dashboard creado y publicado (ID/URL reales), parámetro de
-  fecha validado. **Pendiente del equipo:** solo las **capturas de pantalla** de la interfaz
-  (`capturas_PENDIENTE.md`), no automatizables sin navegador autenticado.
-- **Evidencia:** `evidence/req04-dashboard/`.
-- **Pendientes / siguiente paso:** que el equipo tome las capturas listadas en
-  `capturas_PENDIENTE.md`. Refresco acoplado al Job: **descartado** (el dashboard lee oro en
-  vivo; ver ADR-017 §7).
+#### Fase 6 · ML con MLflow (Req. 6)
 
-### 2026-11-05 — Fase 6: ML con MLflow (Req. 6) — Equipo OceanWatch
+[Registro en Git](https://github.com/danteboe/MINE4213-Proyecto/commit/58c9d0a).
+
 - **Objetivo de la sesión:** cerrar el Req. 6 con **evidencia real**: implementar el caso de ML
   ya fijado por ADR-005 (detección de anomalías de velocidad SOG), demostrando la **integración
   MLOps** completa — features desde el Lakehouse, experimento MLflow, modelo en Unity Catalog con
@@ -267,7 +300,10 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 - **Pendientes / siguiente paso:** ninguno del Req. 6. El `refresh_dashboard` (Fase 7) sigue como
   nodo futuro del DAG; el dashboard (Req. 4) consumirá `gold.anomalias_velocidad`.
 
-### 2026-11-05 — Fase 4: Orquestación por Job de Databricks (Req. 3) — Equipo OceanWatch
+#### Fase 4 · Orquestación por Job de Databricks (Req. 3)
+
+[Registro en Git](https://github.com/danteboe/MINE4213-Proyecto/commit/cbca6fc).
+
 - **Objetivo de la sesión:** cerrar el Req. 3 con **evidencia real**: definir el pipeline
   medallion como un Job de Databricks versionado (DAB), ejecutarlo de verdad (base,
   idempotencia, backfill, reintento), demostrar corridas disparadas por el **scheduler**
@@ -336,7 +372,10 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
   documentados como futuros en el DAG/YAML, no implementados. El cron de producción queda
   PAUSED (activarlo es alternar `pause_status` cuando se opere en continuo).
 
-### 2026-11-05 — Fase 3: Materialización de la bandera `en_agua` en la plata (cierre de brecha) — Equipo OceanWatch
+#### Fase 3 · Materialización de la bandera de agua en plata
+
+[Registro en Git](https://github.com/danteboe/MINE4213-Proyecto/commit/7b2f885).
+
 - **Objetivo de la sesión:** poblar la bandera de calidad `en_agua` de
   `oceanwatch.silver.ais_clean`, que había quedado en NULL tras FEAT-003.
 - **Qué se hizo (síntoma → causa → solución → verificación):**
@@ -365,7 +404,10 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
 - **Pendientes / siguiente paso:** ninguno para esta brecha; la bandera queda materializada y la
   tabla de referencia `silver.celda_en_agua` conservada. Fase 4 (Req. 3).
 
-### 2026-11-05 — Fase 3: Verificación de integración entre FEATs (paso FIXER) — Equipo OceanWatch
+#### Fase 3 · Verificación de integración de calidad
+
+[Registro en Git](https://github.com/danteboe/MINE4213-Proyecto/commit/8cf6421).
+
 - **Objetivo de la sesión:** re-ejecutar, sin confiar en los `.md` previos, la verificación de
   integración extremo a extremo del Req. 2 (costuras FEAT-001 → FEAT-003 → FEAT-004 → FEAT-005)
   con conteos **reales** leídos en vivo del serverless.
@@ -381,11 +423,14 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
   No hizo falta tocar código: las costuras entre FEATs ya cuadraban sobre los 25.9M reales.
 - **Estado Verificado vs Diseñado:** **Verificado (ejecutado)**. (En ese momento `en_agua` estaba
   en `null`; informativo, no afecta invariante ni limpieza de oro. **Ya materializada**
-  posteriormente el 2026-11-05, ver entrada superior.)
+  posteriormente el 2026-11-06, ver entrada anterior.)
 - **Evidencia:** `evidence/req02-capas-calidad/verificacion_integracion_feats.md`.
 - **Pendientes / siguiente paso:** cierre del bucle de convergencia (veredicto); Fase 4 (Req. 3).
 
-### 2026-11-05 — Fase 3: Capas de calidad (plata + cuarentena + métricas + oro) y prueba de compuerta — Equipo OceanWatch
+#### Fase 3 · Capas de calidad y prueba de compuerta
+
+[Registro en Git](https://github.com/danteboe/MINE4213-Proyecto/commit/e5ec0d3).
+
 - **Objetivo de la sesión:** cerrar el Req. 2 con **evidencia real**: materializar la capa
   **plata** con compuertas de calidad y cuarentena, las **métricas** de calidad, la capa **oro**
   (modelo dimensional de negocio) y demostrar extremo a extremo, con conteos reales, que la
@@ -458,7 +503,16 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
   cron en UTC e idempotencia (encadenar ingesta → plata/calidad → oro). Enriquecimiento opcional
   de `en_agua` en plata (procedimiento en `materializacion_plata.md`).
 
-### 2026-11-05 — Fase 2: Ingesta streaming (pipeline real + pruebas de fallos + ADRs) — Equipo OceanWatch
+### 2026-11-05 · Fundaciones, ingesta y primeras reglas de calidad
+
+#### Primeras reglas de plata
+
+Se versionaron el catálogo de reglas y la primera clasificación de agua. Al día siguiente se registraron la materialización de plata y oro y las pruebas de sus compuertas. [Catálogo de reglas](https://github.com/danteboe/MINE4213-Proyecto/commit/a112e9b) · [Primera máscara de agua](https://github.com/danteboe/MINE4213-Proyecto/commit/0194e80).
+
+#### Fase 2 · Ingesta streaming y pruebas de fallos (Req. 1)
+
+[Registro en Git](https://github.com/danteboe/MINE4213-Proyecto/commit/a201fae).
+
 - **Objetivo de la sesión:** cerrar el Req. 1 con **evidencia real**: construir y **ejecutar** el
   pipeline de ingesta incremental a bronce en serverless, probar su tolerancia a fallos con 4
   escenarios **ejecutados de verdad**, justificar `Trigger.availableNow` con comportamiento
@@ -501,7 +555,8 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
   de ADR-006 y las reglas de calidad/cuarentena (incluida la inspección de `_rescued_data`);
   catálogo de códigos `Status`/`VesselType` para gold.
 
-### 2026-11-05 — Fase 2 (inicio): Bootstrap ejecutado + descarga de corpus — Equipo OceanWatch
+#### Fase 2 · Bootstrap y descarga del corpus
+
 - **Objetivo de la sesión:** ejecutar realmente el bootstrap de Unity Catalog (dejar de ser
   "Diseñado") y preparar el corpus del feed para la ingesta streaming.
 - **Qué se hizo:** se ejecutó `resources/sql/bootstrap_oceanwatch.sql` (9 sentencias
@@ -523,7 +578,8 @@ plantilla de abajo. Las entradas se ordenan de la más reciente a la más antigu
   de 17 campos, e implementar el pipeline Auto Loader → bronze con Trigger.availableNow, dedup
   por MMSI+BaseDateTime y las 4 pruebas de tolerancia a fallos.
 
-### 2026-11-05 — Fase 1: Fundaciones — Equipo OceanWatch
+#### Fase 1 · Fundaciones
+
 - **Objetivo de la sesión:** establecer la estructura del repositorio y las decisiones de
   arquitectura (ADRs) para la Entrega 2, partiendo del entorno Databricks serverless creado
   desde cero.
